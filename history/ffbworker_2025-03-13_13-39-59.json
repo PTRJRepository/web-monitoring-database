@@ -1,0 +1,41 @@
+{
+  "timestamp": "2025-03-13_13-39-59",
+  "queryType": "ffbworker",
+  "recordCount": 2,
+  "data": [
+    {
+      "ID": "4455650",
+      "TRANSNO": "30654910",
+      "FROMOCCODE": "P1B",
+      "TOOCCODE": "P1B",
+      "WORKERCODE": "B0602",
+      "FIELDNO": "PM2405B2",
+      "LOOSEFRUIT": 0,
+      "RIPE": 8,
+      "UNRIPE": 0,
+      "OVERRIPE": 0,
+      "TRANSDATE": "2025-03-12T10:18:57.000Z",
+      "TRANSSTATUS": "OK          ",
+      "EmployeeStatus": "2 ",
+      "PosCode": "GEN     ",
+      "JumlahKemunculan": 13
+    },
+    {
+      "ID": "4455641",
+      "TRANSNO": "30566146",
+      "FROMOCCODE": "P1B",
+      "TOOCCODE": "P1B",
+      "WORKERCODE": "B0653",
+      "FIELDNO": "PM2405B2",
+      "LOOSEFRUIT": 0,
+      "RIPE": 33,
+      "UNRIPE": 0,
+      "OVERRIPE": 2,
+      "TRANSDATE": "2025-03-12T11:14:49.000Z",
+      "TRANSSTATUS": "OK          ",
+      "EmployeeStatus": "2 ",
+      "PosCode": "GEN     ",
+      "JumlahKemunculan": 12
+    }
+  ]
+}

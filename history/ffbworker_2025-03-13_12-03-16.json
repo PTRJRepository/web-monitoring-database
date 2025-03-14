@@ -1,0 +1,58 @@
+{
+  "timestamp": "2025-03-13_12-03-16",
+  "queryType": "ffbworker",
+  "recordCount": 3,
+  "data": [
+    {
+      "ID": "4362651",
+      "TRANSNO": "00301593",
+      "FROMOCCODE": "IJL",
+      "TOOCCODE": "IJL",
+      "WORKERCODE": "L0014",
+      "FIELDNO": "PM2201L1",
+      "LOOSEFRUIT": 0,
+      "RIPE": 45,
+      "UNRIPE": 0,
+      "OVERRIPE": 0,
+      "TRANSDATE": "2025-02-08T12:24:44.000Z",
+      "TRANSSTATUS": "OK          ",
+      "EmployeeStatus": "2 ",
+      "PosCode": "GEN     ",
+      "JumlahKemunculan": 5
+    },
+    {
+      "ID": "4414678",
+      "TRANSNO": "30565732",
+      "FROMOCCODE": "P1B",
+      "TOOCCODE": "P1B",
+      "WORKERCODE": "B0653",
+      "FIELDNO": "PM2404B2",
+      "LOOSEFRUIT": 0,
+      "RIPE": 43,
+      "UNRIPE": 0,
+      "OVERRIPE": 1,
+      "TRANSDATE": "2025-02-28T10:55:50.000Z",
+      "TRANSSTATUS": "OK          ",
+      "EmployeeStatus": "2 ",
+      "PosCode": "GEN     ",
+      "JumlahKemunculan": 19
+    },
+    {
+      "ID": "4414674",
+      "TRANSNO": "30565728",
+      "FROMOCCODE": "P1B",
+      "TOOCCODE": "P1B",
+      "WORKERCODE": "B0602",
+      "FIELDNO": "PM2404B2",
+      "LOOSEFRUIT": 1,
+      "RIPE": 47,
+      "UNRIPE": 0,
+      "OVERRIPE": 2,
+      "TRANSDATE": "2025-02-28T10:41:11.000Z",
+      "TRANSSTATUS": "OK          ",
+      "EmployeeStatus": "2 ",
+      "PosCode": "GEN     ",
+      "JumlahKemunculan": 13
+    }
+  ]
+}
