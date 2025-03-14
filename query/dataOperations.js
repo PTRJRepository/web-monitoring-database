@@ -196,6 +196,7 @@ function loadHistoryDataByFileName(fileName) {
 // Fungsi untuk mendapatkan data tunjangan beras
 async function getTunjanganBerasData() {
     try {
+        // Menggunakan query dari file SQL
         const data = await executeQuery(TUNJANGAN_BERAS_QUERY);
         return data;
     } catch (err) {

@@ -289,4 +289,4 @@ WHERE
         AND emp.SalGradeCode = 'SKUH'
     )
     AND (RiceRationCode IS NULL OR RiceRationCode <> 'BERASBHL')
-ORDER BY EmpCode;
+ORDER BY EmpCode; 
