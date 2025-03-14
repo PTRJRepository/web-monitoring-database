@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Konfigurasi Sistem</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2196F3;
+            --warning-color: #FFA726;
+            --error-color: #EF5350;
+            --success-color: #66BB6A;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .config-section {
+            background-color: white;
+            padding: 25px;
+            margin-bottom: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .config-section:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 10px 15px;
+            border: 1px solid #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(33, 150, 243, 0.1);
+        }
+
+        .btn {
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background-color: #1976D2;
+            transform: translateY(-1px);
+        }
+
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1050;
+        }
+
+        .toast {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            margin-bottom: 10px;
+            min-width: 250px;
+        }
+
+        .toast-header {
+            border-radius: 8px 8px 0 0;
+            padding: 12px 15px;
+        }
+
+        .toast-body {
+            padding: 12px 15px;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        .loading-text {
+            font-size: 1.2rem;
+            color: #333;
+            text-align: center;
+            max-width: 80%;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">
+            Menjalankan Query...
+            <div id="queryDetails" class="mt-2 text-muted"></div>
+        </div>
+    </div>
+
+    <!-- Toast container for notifications -->
+    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1 class="h3">Konfigurasi Sistem</h1>
+            <div>
+                <a href="/" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-home me-2"></i>Kembali ke Dashboard
+                </a>
+                <a href="/logout" class="btn btn-outline-danger">
+                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                </a>
+            </div>
+        </div>
+
+        <!-- Query Manual Section -->
+        <div class="config-section">
+            <h3 class="h5 mb-4"><i class="fas fa-database me-2"></i>Jalankan Query Manual</h3>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Query akan dijalankan langsung ke database dan hasilnya akan disimpan ke file temporary.
+            </div>
+            
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Status Data</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Pengecekan Terakhir:</strong> <span id="lastCheckTime"><%= lastCheck %></span></p>
+                            <p><strong>Email Terakhir:</strong> <span id="lastEmailTime"><%= lastEmail %></span></p>
+                            <p><strong>Status:</strong> <span id="monitoringStatus" class="badge <%= isActive ? 'bg-success' : 'bg-danger' %>"><%= isActive ? 'Active' : 'Inactive' %></span></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Jalankan Query</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label class="form-label">Pilih Query</label>
+                                <select id="queryType" class="form-select">
+                                    <option value="all">Semua Query</option>
+                                    <option value="tunjangan_beras">Tunjangan Beras</option>
+                                    <option value="bpjs">BPJS</option>
+                                    <option value="gwscanner">GWScanner</option>
+                                    <option value="ffbworker">FFB Worker</option>
+                                </select>
+                            </div>
+                            <button id="runQueryBtn" class="btn btn-primary">
+                                <i class="fas fa-play me-2"></i>Jalankan Query
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Email Configuration Section -->
+        <div class="config-section">
+            <h3 class="h5 mb-4"><i class="fas fa-envelope me-2"></i>Konfigurasi Email</h3>
+            
+            <!-- Email Notification Toggle -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Notifikasi Email</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <p class="text-muted mb-0">Aktifkan/nonaktifkan pengiriman notifikasi email</p>
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-end align-items-center">
+                            <div class="form-check form-switch d-flex align-items-center">
+                                <input class="form-check-input me-2" type="checkbox" id="emailToggle" style="transform: scale(1.5);" <%= emailConfig.isEnabled ? 'checked' : '' %>>
+                                <label class="form-check-label fs-5" for="emailToggle" id="emailToggleStatus"><%= emailConfig.isEnabled ? 'Aktif' : 'Nonaktif' %></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <form id="emailConfigForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Email Pengirim</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" class="form-control" id="senderEmail" name="sender.email" value="<%= emailConfig.senderEmail %>">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password Email</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                <input type="password" class="form-control" id="senderPassword" name="sender.password" placeholder="Masukkan password jika ingin mengubah">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Pertama Kali</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="email" class="form-control" id="firstTimeEmail" name="recipients.firstTime" value="<%= emailConfig.firstTimeEmail %>">
+                            </div>
+                            <small class="text-muted">Email ini akan menerima notifikasi pertama kali saat aplikasi dimulai</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email Default</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
+                                <input type="email" class="form-control" id="defaultEmail" name="recipients.interval" value="<%= emailConfig.receiverEmail %>">
+                            </div>
+                            <small class="text-muted">Email default jika tidak ada konfigurasi khusus</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">CC</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-users"></i></span>
+                                <input type="text" class="form-control" id="ccEmail" name="cc" value="<%= emailConfig.ccEmail %>" placeholder="Pisahkan dengan koma">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Interval Pengecekan (menit)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-clock"></i></span>
+                                <input type="number" class="form-control" id="scheduleInterval" name="interval.checkData" value="60" min="1">
+                            </div>
+                            <small class="text-muted">Default: 60 menit (1 jam)</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Interval Email (menit)</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-envelope-open-text"></i></span>
+                                <input type="number" class="form-control" id="emailInterval" name="interval.sendEmail" value="<%= emailConfig.emailInterval %>" min="1">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="emailEnabled" name="isEnabled" <%= emailConfig.isEnabled ? 'checked' : '' %>>
+                                <label class="form-check-label" for="emailEnabled">Aktifkan Notifikasi Email</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-3">
+                    <div class="col">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Simpan Konfigurasi
+                        </button>
+                        <button type="button" class="btn btn-success ms-2" id="sendTestEmail">
+                            <i class="fas fa-paper-plane me-2"></i>Kirim Email Test
+                        </button>
+                        <button type="button" class="btn btn-info ms-2" id="sendCurrentData">
+                            <i class="fas fa-envelope me-2"></i>Kirim Data Sekarang
+                        </button>
+                        <button type="button" class="btn btn-warning ms-2" id="resetEmailConfig">
+                            <i class="fas fa-undo me-2"></i>Reset ke Default
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="config-section">
+            <h3 class="h5 mb-4"><i class="fas fa-lock me-2"></i>Keamanan</h3>
+            <form id="securityForm">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Kata Sandi Halaman Konfigurasi</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-key"></i></span>
+                                <input type="password" class="form-control" id="configPassword" name="configPassword" placeholder="Masukkan kata sandi baru">
+                            </div>
+                            <small class="text-muted">Kata sandi ini digunakan untuk mengakses halaman konfigurasi</small>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Simpan Kata Sandi
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            // Fungsi untuk menampilkan loading overlay
+            function showLoading(message) {
+                $('#queryDetails').text(message || '');
+                $('#loadingOverlay').fadeIn(200);
+            }
+
+            // Fungsi untuk menyembunyikan loading overlay
+            function hideLoading() {
+                $('#loadingOverlay').fadeOut(200);
+            }
+
+            // Fungsi untuk menampilkan toast
+            function showToast(title, message, type) {
+                const toastHtml = `
+                    <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="toast-header bg-${type} text-white">
+                            <strong class="me-auto">${title}</strong>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                        <div class="toast-body">
+                            ${message}
+                        </div>
+                    </div>
+                `;
+                
+                $('.toast-container').append(toastHtml);
+                const toastElement = $('.toast').last();
+                const toast = new bootstrap.Toast(toastElement, { delay: 5000 });
+                toast.show();
+                
+                // Hapus toast setelah hilang
+                toastElement.on('hidden.bs.toast', function() {
+                    $(this).remove();
+                });
+            }
+
+            // Event handler untuk tombol jalankan query
+            $('#runQueryBtn').click(function() {
+                const queryType = $('#queryType').val();
+                const queryName = $('#queryType option:selected').text();
+                
+                showLoading(`Menjalankan query ${queryName}...`);
+                
+                $.ajax({
+                    url: '/run-query',
+                    method: 'POST',
+                    data: { queryType },
+                    success: function(result) {
+                        hideLoading();
+                        if (result.success) {
+                            showToast('Sukses', `Query ${queryName} berhasil dijalankan`, 'success');
+                        } else {
+                            showToast('Error', result.error || 'Gagal menjalankan query', 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        hideLoading();
+                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat menjalankan query';
+                        showToast('Error', errorMsg, 'danger');
+                    }
+                });
+            });
+
+            // Event handler untuk toggle email
+            $('#emailToggle').change(function() {
+                const isEnabled = $(this).is(':checked');
+                $('#emailToggleStatus').text(isEnabled ? 'Aktif' : 'Nonaktif');
+                $('#emailEnabled').prop('checked', isEnabled);
+            });
+
+            // Event handler untuk form konfigurasi email
+            $('#emailConfigForm').submit(function(e) {
+                e.preventDefault();
+                
+                const formData = $(this).serialize();
+                showLoading('Menyimpan konfigurasi email...');
+                
+                $.ajax({
+                    url: '/api/email-config',
+                    method: 'POST',
+                    data: formData,
+                    success: function(result) {
+                        hideLoading();
+                        if (result.success) {
+                            showToast('Sukses', 'Konfigurasi email berhasil disimpan', 'success');
+                        } else {
+                            showToast('Error', result.error || 'Gagal menyimpan konfigurasi email', 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        hideLoading();
+                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat menyimpan konfigurasi email';
+                        showToast('Error', errorMsg, 'danger');
+                    }
+                });
+            });
+
+            // Event handler untuk tombol kirim email test
+            $('#sendTestEmail').click(function() {
+                showLoading('Mengirim email test...');
+                
+                $.ajax({
+                    url: '/api/send-test-email',
+                    method: 'POST',
+                    success: function(result) {
+                        hideLoading();
+                        if (result.success) {
+                            showToast('Sukses', 'Email test berhasil dikirim', 'success');
+                        } else {
+                            showToast('Error', result.error || 'Gagal mengirim email test', 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        hideLoading();
+                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat mengirim email test';
+                        showToast('Error', errorMsg, 'danger');
+                    }
+                });
+            });
+
+            // Event handler untuk tombol kirim data sekarang
+            $('#sendCurrentData').click(function() {
+                showLoading('Mengirim data sekarang...');
+                
+                $.ajax({
+                    url: '/api/send-current-data',
+                    method: 'POST',
+                    success: function(result) {
+                        hideLoading();
+                        if (result.success) {
+                            showToast('Sukses', 'Data berhasil dikirim', 'success');
+                        } else {
+                            showToast('Error', result.error || 'Gagal mengirim data', 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        hideLoading();
+                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat mengirim data';
+                        showToast('Error', errorMsg, 'danger');
+                    }
+                });
+            });
+
+            // Event handler untuk tombol reset konfigurasi email
+            $('#resetEmailConfig').click(function() {
+                showLoading('Mengreset konfigurasi email ke default...');
+                
+                $.ajax({
+                    url: '/api/reset-email-config',
+                    method: 'POST',
+                    success: function(result) {
+                        hideLoading();
+                        if (result.success) {
+                            showToast('Sukses', 'Konfigurasi email berhasil direset ke default', 'success');
+                        } else {
+                            showToast('Error', result.error || 'Gagal mengreset konfigurasi email', 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        hideLoading();
+                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat mengreset konfigurasi email';
+                        showToast('Error', errorMsg, 'danger');
+                    }
+                });
+            });
+
+            // Event handler untuk form keamanan
+            $('#securityForm').submit(function(e) {
+                e.preventDefault();
+                
+                const formData = $(this).serialize();
+                showLoading('Menyimpan kata sandi...');
+                
+                $.ajax({
+                    url: '/api/update-config-password',
+                    method: 'POST',
+                    data: formData,
+                    success: function(result) {
+                        hideLoading();
+                        if (result.success) {
+                            showToast('Sukses', 'Kata sandi berhasil disimpan', 'success');
+                        } else {
+                            showToast('Error', result.error || 'Gagal menyimpan kata sandi', 'danger');
+                        }
+                    },
+                    error: function(xhr) {
+                        hideLoading();
+                        const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat menyimpan kata sandi';
+                        showToast('Error', errorMsg, 'danger');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html> 

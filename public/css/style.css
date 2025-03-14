@@ -1,0 +1,81 @@
+.warning-row {
+    background-color: #ffecb3 !important;
+}
+
+.error-row {
+    background-color: #ffcdd2 !important;
+}
+
+.refresh-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    padding: 10px 20px;
+    border-radius: 30px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.last-check {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    z-index: 1000;
+    padding: 8px 15px;
+    border-radius: 5px;
+    background-color: #f8f9fa;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.table-container {
+    margin: 20px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    font-weight: 600;
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 15px;
+    font-size: 0.85em;
+    font-weight: 500;
+}
+
+.status-badge.warning {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.status-badge.error {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.status-badge.success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        margin-bottom: 60px;
+    }
+    
+    .refresh-button,
+    .last-check {
+        position: static;
+        margin: 10px;
+        width: calc(100% - 20px);
+        text-align: center;
+    }
+} 

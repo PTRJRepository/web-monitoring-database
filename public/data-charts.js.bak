@@ -1,0 +1,730 @@
+// Tunggu dokumen siap
+$(document).ready(function() {
+    console.log('Document ready, initializing data-charts.js');
+    
+    // Inisialisasi DataTables
+    initDataTables();
+    
+    // Refresh data untuk pertama kali
+    refreshData();
+    
+    // Update chart data
+    updateDataChart();
+    
+    // Load data history dan update grafik timeline
+    if (typeof loadHistoryDataAndUpdateTimeline === 'function') {
+        loadHistoryDataAndUpdateTimeline();
+    }
+    
+    // Event handler untuk tab
+    $('.nav-link').on('shown.bs.tab', function (e) {
+        // Update chart whenever tab changes
+        updateDataChart();
+    
+    
+    // Event handler untuk tombol refresh
+    $('#refreshBtn').click(function() {
+        refreshData();
+    
+    
+    // Event handler untuk tombol refresh tunjangan
+    $('#refreshTunjanganBtn').click(function() {
+        showLoading('Memuat data tunjangan beras...');
+        
+        $.ajax({
+            url: '/api/refresh/tunjangan',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateTunjanganBerasTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data tunjangan beras berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data tunjangan beras', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Event handler untuk tombol refresh BPJS
+    $('#refreshBpjsBtn').click(function() {
+        showLoading('Memuat data BPJS...');
+        
+        $.ajax({
+            url: '/api/refresh/bpjs',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateBpjsTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data BPJS berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data BPJS', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Event handler untuk tombol refresh GWScanner
+    $('#refreshGwscannerBtn').click(function() {
+        showLoading('Memuat data GWScanner...');
+        
+        $.ajax({
+            url: '/api/refresh/gwscanner',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateGwScannerTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data GWScanner berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data GWScanner', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Event handler untuk tombol refresh FFB Worker
+    $('#refreshFfbworkerBtn').click(function() {
+        showLoading('Memuat data FFB Worker...');
+        
+        $.ajax({
+            url: '/api/refresh/ffbworker',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateFfbWorkerTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data FFB Worker berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data FFB Worker', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Set interval untuk refresh data otomatis setiap 5 menit
+    setInterval(refreshData, 5 * 60 * 1000);
+});
+
+// Fungsi untuk memperbarui grafik data
+function updateDataChart() {
+    // Pastikan Chart.js sudah dimuat
+    if (typeof Chart === 'undefined') {
+        console.warn('Chart.js belum dimuat, menunggu...');
+        setTimeout(updateDataChart, 1000);
+        return;
+    }
+
+    try {
+        // Ambil data dari elemen yang ada
+        const tunjanganCount = parseInt($('#totalData').text()) || 0;
+        const bpjsCount = parseInt($('#totalBpjsData').text()) || 0;
+        const gwscannerCount = parseInt($('#totalGwscannerData').text()) || 0;
+        const ffbworkerCount = parseInt($('#totalFfbworkerData').text()) || 0;
+        
+        // Ambil elemen canvas grafik
+        const ctx = document.getElementById('dataChangeChart');
+        if (!ctx) {
+            console.error('Elemen canvas #dataChangeChart tidak ditemukan');
+            return;
+        }
+        
+        // Hancurkan grafik yang ada jika sudah ada
+        if (window.dataChart instanceof Chart) {
+            window.dataChart.destroy();
+        }
+        
+        // Buat grafik baru
+        window.dataChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ['Tunjangan Beras', 'BPJS', 'Duplikat GWScanner', 'Non-Pemanen dengan Ripe'],
+                datasets: [{
+                    label: 'Jumlah Data',
+                    data: [tunjanganCount, bpjsCount, gwscannerCount, ffbworkerCount],
+                    backgroundColor: [
+                        'rgba(33, 150, 243, 0.7)',
+                        'rgba(255, 167, 38, 0.7)',
+                        'rgba(239, 83, 80, 0.7)',
+                        'rgba(102, 187, 106, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(33, 150, 243, 1)',
+                        'rgba(255, 167, 38, 1)',
+                        'rgba(239, 83, 80, 1)',
+                        'rgba(102, 187, 106, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Jumlah Data'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Jenis Data'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.y;
+                            }
+                        }
+                    }
+                }
+            }
+        
+    } catch (error) {
+        console.error('Error updating data chart:', error);
+    }
+}
+
+// Fungsi untuk refresh data
+function refreshData() {
+    showLoading('Memuat data...');
+    
+    $.ajax({
+        url: '/api/data',
+        method: 'GET',
+        dataType: 'json',
+        success: function(result) {
+            hideLoading();
+            
+            if (result && result.success) {
+                // Update data tunjangan beras
+                if (result.data) {
+                    updateTunjanganBerasTable(result.data);
+                }
+                
+                // Update data BPJS
+                if (result.bpjsData) {
+                    updateBpjsTable(result.bpjsData);
+                }
+                
+                // Update data GWScanner
+                if (result.gwscannerData) {
+                    updateGwScannerTable(result.gwscannerData);
+                }
+                
+                // Update data FFB Worker
+                if (result.ffbworkerData) {
+                    updateFfbWorkerTable(result.ffbworkerData);
+                }
+                
+                // Update status
+                $('#lastCheckTime').text(result.lastCheck || 'Never');
+                $('#lastEmailTime').text(result.lastEmail || 'Never');
+                
+                // Update status monitoring
+                if (result.isActive) {
+                    $('#monitoringStatus').removeClass('bg-danger').addClass('bg-success').text('Active');
+                } else {
+                    $('#monitoringStatus').removeClass('bg-success').addClass('bg-danger').text('Inactive');
+                }
+                
+                // Update chart data
+                updateDataChart();
+                
+                // Update grafik timeline
+                if (typeof updateTimelineChart === 'function' && result.historyData) {
+                    updateTimelineChart(result.historyData);
+                }
+                
+                // Tampilkan notifikasi jika data dari cache
+                if (result.fromCache) {
+                    showToast('Info', 'Data diambil dari cache. Refresh data di background...', 'info');
+                }
+                
+                // Tampilkan error jika ada
+                if (result.error) {
+                    showToast('Warning', result.error, 'warning');
+                }
+            } else {
+                showToast('Error', result.error || 'Gagal memuat data', 'danger');
+            }
+        },
+        error: function(xhr) {
+            hideLoading();
+            const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+            showToast('Error', errorMsg, 'danger');
+        }
+    
+}
+
+// Fungsi untuk menampilkan notifikasi
+function showNotification(message) {
+    if ("Notification" in window) {
+        Notification.requestPermission().then(function(permission) {
+            if (permission === "granted") {
+                new Notification("Update Data", { body: message 
+            }
+        
+    }
+    
+    // Tampilkan juga di UI
+    const toast = $('<div class="toast" role="alert" aria-live="assertive" aria-atomic="true">')
+        .append($('<div class="toast-header">')
+            .append('<strong class="mr-auto">Notifikasi</strong>')
+            .append('<button type="button" class="ml-2 mb-1 close" data-dismiss="toast" aria-label="Close"><span aria-hidden="true">&times;</span></button>'))
+        .append($('<div class="toast-body">').text(message));
+    
+    $('.toast-container').append(toast);
+    toast.toast({ autohide: true, delay: 5000 }).toast('show');
+}
+
+// Inisialisasi DataTables
+function initDataTables() {
+    try {
+        // Tunjangan Beras DataTable
+        if ($.fn.DataTable.isDataTable('#dataTable')) {
+            $('#dataTable').DataTable().destroy();
+        }
+        $('#dataTable').DataTable({
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'excel', 'pdf', 'print'
+            ],
+            columnDefs: [
+                { "defaultContent": "-", "targets": "_all" }
+            ],
+            language: {
+                search: "Cari:",
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+                infoFiltered: "(difilter dari _MAX_ total data)",
+                zeroRecords: "Tidak ada data yang ditemukan",
+                paginate: {
+                    first: "Pertama",
+                    last: "Terakhir",
+                    next: "Selanjutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        
+        
+        // BPJS DataTable
+        if ($.fn.DataTable.isDataTable('#bpjsTable')) {
+            $('#bpjsTable').DataTable().destroy();
+        }
+        $('#bpjsTable').DataTable({
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'excel', 'pdf', 'print'
+            ],
+            columnDefs: [
+                { "defaultContent": "-", "targets": "_all" }
+            ],
+            language: {
+                search: "Cari:",
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+                infoFiltered: "(difilter dari _MAX_ total data)",
+                zeroRecords: "Tidak ada data yang ditemukan",
+                paginate: {
+                    first: "Pertama",
+                    last: "Terakhir",
+                    next: "Selanjutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        
+        
+        // GWScanner DataTable
+        if ($.fn.DataTable.isDataTable('#gwscannerTable')) {
+            $('#gwscannerTable').DataTable().destroy();
+        }
+        $('#gwscannerTable').DataTable({
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'excel', 'pdf', 'print'
+            ],
+            columnDefs: [
+                { "defaultContent": "-", "targets": "_all" }
+            ],
+            language: {
+                search: "Cari:",
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+                infoFiltered: "(difilter dari _MAX_ total data)",
+                zeroRecords: "Tidak ada data yang ditemukan",
+                paginate: {
+                    first: "Pertama",
+                    last: "Terakhir",
+                    next: "Selanjutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        
+        
+        // FFB Worker DataTable
+        if ($.fn.DataTable.isDataTable('#ffbworkerTable')) {
+            $('#ffbworkerTable').DataTable().destroy();
+        }
+        $('#ffbworkerTable').DataTable({
+            responsive: true,
+            dom: 'Bfrtip',
+            buttons: [
+                'copy', 'excel', 'pdf', 'print'
+            ],
+            columnDefs: [
+                { "defaultContent": "-", "targets": "_all" }
+            ],
+            language: {
+                search: "Cari:",
+                lengthMenu: "Tampilkan _MENU_ data",
+                info: "Menampilkan _START_ sampai _END_ dari _TOTAL_ data",
+                infoEmpty: "Menampilkan 0 sampai 0 dari 0 data",
+                infoFiltered: "(difilter dari _MAX_ total data)",
+                zeroRecords: "Tidak ada data yang ditemukan",
+                paginate: {
+                    first: "Pertama",
+                    last: "Terakhir",
+                    next: "Selanjutnya",
+                    previous: "Sebelumnya"
+                }
+            }
+        
+        
+        console.log('DataTables initialized successfully');
+    } catch (error) {
+        console.error('Error initializing DataTables:', error);
+    }
+}
+
+// Fungsi untuk update tabel tunjangan beras
+function updateTunjanganBerasTable(data) {
+    try {
+        const table = $('#dataTable').DataTable();
+        table.clear();
+        
+        if (data && data.length > 0) {
+            // Convert data objects to arrays if necessary
+            const formattedData = data.map(item => {
+                if (Array.isArray(item)) {
+                    return item;
+                }
+                // Convert object to array for DataTables
+                return Object.values(item);
+            
+            
+            table.rows.add(formattedData).draw();
+            $('#totalData').text(data.length);
+        } else {
+            $('#totalData').text('0');
+            table.draw();
+        }
+    } catch (error) {
+        console.error('Error updating tunjangan beras table:', error);
+        $('#totalData').text('0');
+    }
+}
+
+// Fungsi untuk update tabel BPJS
+function updateBpjsTable(data) {
+    try {
+        const table = $('#bpjsTable').DataTable();
+        table.clear();
+        
+        if (data && data.length > 0) {
+            // Convert data objects to arrays if necessary
+            const formattedData = data.map(item => {
+                if (Array.isArray(item)) {
+                    return item;
+                }
+                // Convert object to array for DataTables
+                return Object.values(item);
+            
+            
+            table.rows.add(formattedData).draw();
+            $('#totalBpjsData').text(data.length);
+        } else {
+            $('#totalBpjsData').text('0');
+            table.draw();
+        }
+    } catch (error) {
+        console.error('Error updating BPJS table:', error);
+        $('#totalBpjsData').text('0');
+    }
+}
+
+// Fungsi untuk update tabel GWScanner
+function updateGwScannerTable(data) {
+    try {
+        const table = $('#gwscannerTable').DataTable();
+        table.clear();
+        
+        if (data && data.length > 0) {
+            // Convert data objects to arrays if necessary
+            const formattedData = data.map(item => {
+                if (Array.isArray(item)) {
+                    return item;
+                }
+                // Convert object to array for DataTables
+                return Object.values(item);
+            
+            
+            table.rows.add(formattedData).draw();
+            $('#totalGwscannerData').text(data.length);
+        } else {
+            $('#totalGwscannerData').text('0');
+            table.draw();
+        }
+    } catch (error) {
+        console.error('Error updating GWScanner table:', error);
+        $('#totalGwscannerData').text('0');
+    }
+}
+
+// Fungsi untuk update tabel FFB Worker
+function updateFfbWorkerTable(data) {
+    try {
+        const table = $('#ffbworkerTable').DataTable();
+        table.clear();
+        
+        if (data && data.length > 0) {
+            // Convert data objects to arrays if necessary
+            const formattedData = data.map(item => {
+                if (Array.isArray(item)) {
+                    return item;
+                }
+                // Convert object to array for DataTables
+                return Object.values(item);
+            
+            
+            table.rows.add(formattedData).draw();
+            $('#totalFfbworkerData').text(data.length);
+        } else {
+            $('#totalFfbworkerData').text('0');
+            table.draw();
+        }
+    } catch (error) {
+        console.error('Error updating FFB Worker table:', error);
+        $('#totalFfbworkerData').text('0');
+    }
+}
+
+// Inisialisasi event handler saat dokumen siap
+$(document).ready(function() {
+    console.log('Document ready, initializing data-charts.js');
+    
+    // Inisialisasi DataTables
+    initDataTables();
+    
+    // Refresh data untuk pertama kali
+    refreshData();
+    
+    // Update chart data
+    updateDataChart();
+    
+    // Load data history dan update grafik timeline
+    if (typeof loadHistoryDataAndUpdateTimeline === 'function') {
+        loadHistoryDataAndUpdateTimeline();
+    }
+    
+    // Event handler untuk tab
+    $('.nav-link').on('shown.bs.tab', function (e) {
+        // Update chart whenever tab changes
+        updateDataChart();
+    
+    
+    // Event handler untuk tombol refresh
+    $('#refreshBtn').click(function() {
+        refreshData();
+    
+    
+    // Event handler untuk tombol refresh tunjangan
+    $('#refreshTunjanganBtn').click(function() {
+        showLoading('Memuat data tunjangan beras...');
+        
+        $.ajax({
+            url: '/api/refresh/tunjangan',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateTunjanganBerasTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data tunjangan beras berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data tunjangan beras', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Event handler untuk tombol refresh BPJS
+    $('#refreshBpjsBtn').click(function() {
+        showLoading('Memuat data BPJS...');
+        
+        $.ajax({
+            url: '/api/refresh/bpjs',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateBpjsTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data BPJS berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data BPJS', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Event handler untuk tombol refresh GWScanner
+    $('#refreshGwscannerBtn').click(function() {
+        showLoading('Memuat data GWScanner...');
+        
+        $.ajax({
+            url: '/api/refresh/gwscanner',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateGwScannerTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data GWScanner berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data GWScanner', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Event handler untuk tombol refresh FFB Worker
+    $('#refreshFfbworkerBtn').click(function() {
+        showLoading('Memuat data FFB Worker...');
+        
+        $.ajax({
+            url: '/api/refresh/ffbworker',
+            method: 'GET',
+            dataType: 'json',
+            success: function(result) {
+                hideLoading();
+                
+                if (result.success) {
+                    updateFfbWorkerTable(result.data);
+                    $('#lastCheckTime').text(result.lastCheck || 'Never');
+                    
+                    // Update chart data
+                    updateDataChart();
+                    
+                    showToast('Sukses', 'Data FFB Worker berhasil diperbarui', 'success');
+                } else {
+                    showToast('Error', result.error || 'Gagal memuat data FFB Worker', 'danger');
+                }
+            },
+            error: function(xhr) {
+                hideLoading();
+                const errorMsg = xhr.responseJSON ? xhr.responseJSON.error : 'Terjadi kesalahan saat memuat data';
+                showToast('Error', errorMsg, 'danger');
+            }
+        
+    
+    
+    // Set interval untuk refresh data otomatis setiap 5 menit
+    setInterval(refreshData, 5 * 60 * 1000);
+}); 
