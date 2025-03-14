@@ -9,6 +9,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <!-- Tambahkan CSS untuk tombol DataTables -->
     <link href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" rel="stylesheet">
+    
+    <!-- CSS Modular -->
+    <link href="/css/modules/gwscanner-overtime.css" rel="stylesheet">
     <style>
         :root {
             --primary-color: #4e73df;
@@ -644,6 +647,11 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="gwscanner-overtime-tab" data-bs-toggle="pill" data-bs-target="#gwscanner-overtime-data" type="button" role="tab">
+                                <i class="fas fa-sync-alt me-2"></i>GWScanner-Overtime
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="history-tab" data-bs-toggle="pill" data-bs-target="#history-data" type="button" role="tab">
                                 <i class="fas fa-history me-2"></i>History Query
                             </button>
@@ -744,6 +752,34 @@
                         <div class="stats-card bg-success">
                             <h5 class="card-title"><i class="fas fa-clock me-2"></i>Interval Check</h5>
                             <p class="card-text">5 menit</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- GWScanner-Overtime Stats Cards -->
+                <div class="row mb-4 gwscanner-overtime-stats" id="gwscanner-overtime-stats" style="display: none;">
+                    <div class="col-md-3">
+                        <div class="stats-card bg-info">
+                            <h5 class="card-title"><i class="fas fa-database me-2"></i>Total Data Tidak Sinkron</h5>
+                            <p class="card-text" id="totalGwscannerOvertimeData">0</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card bg-warning text-dark">
+                            <h5 class="card-title"><i class="fas fa-sync-alt me-2"></i>Data di Overtime</h5>
+                            <p class="card-text" id="errorGwscannerOvertimeData">0</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card bg-danger">
+                            <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Perlu Disinkronkan</h5>
+                            <p class="card-text" id="actionNeededGwscannerOvertimeData">0</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card bg-success">
+                            <h5 class="card-title"><i class="fas fa-clock me-2"></i>Terakhir Diperbarui</h5>
+                            <p class="card-text" id="lastUpdatedGwscannerOvertime">-</p>
                         </div>
                     </div>
                 </div>
@@ -919,6 +955,38 @@
                         </div>
                     </div>
                     
+                    <!-- GWScanner-Overtime Tab -->
+                    <div class="tab-pane fade" id="gwscanner-overtime-data" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Data Overtime yang Tidak Ada di GWScanner</h5>
+                                <p class="subtitle">Menampilkan data yang ada di sistem Overtime tetapi belum tercatat di sistem GWScanner. Data ini perlu diverifikasi dan disinkronkan.</p>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive" style="overflow-x: auto; position: sticky; top: 0;">
+                                    <table id="gwscannerOvertimeTable" class="table table-striped table-bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Status</th>
+                                                <th>Kode Karyawan</th>
+                                                <th>Nama Karyawan</th>
+                                                <th>Posisi</th>
+                                                <th>Tanggal Transaksi</th>
+                                                <th>No. Transaksi</th>
+                                                <th>Kode OC Asal</th>
+                                                <th>Kode OC Tujuan</th>
+                                                <th>Status Transaksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <!-- Data akan diisi melalui JavaScript -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- History Tab -->
                     <div class="tab-pane fade" id="history-data" role="tabpanel">
                         <div class="card">
@@ -995,6 +1063,20 @@
                                     <h5 class="card-title"><i class="fas fa-user-hard-hat me-2"></i>FFB Worker</h5>
                                     <p class="card-text">Perbarui data non-pemanen dengan Ripe dari database.</p>
                                     <button id="updateFfbworkerBtn" class="btn btn-primary">
+                                        <i class="fas fa-sync-alt me-2"></i>Update Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h5 class="card-title"><i class="fas fa-sync-alt me-2"></i>GWScanner-Overtime</h5>
+                                    <p class="card-text">Perbarui data sinkronisasi GWScanner dan Overtime dari database.</p>
+                                    <button id="updateGwscannerOvertimeBtn" class="btn btn-primary">
                                         <i class="fas fa-sync-alt me-2"></i>Update Data
                                     </button>
                                 </div>
@@ -1299,14 +1381,21 @@
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
     
-    <!-- Script aplikasi -->
+    <!-- Script lama yang masih diperlukan -->
     <script src="/utils.js"></script>
     <script src="/chart-init.js"></script>
     <script src="/timeline-chart.js"></script>
     <script src="/data-charts.js"></script>
     <script src="/history-timeline.js"></script>
-    <script src="/notification.js"></script>
     <script src="/email-config.js"></script>
+    
+    <!-- Script modul aplikasi -->
+    <script src="/js/modules/notification.js"></script>
+    <script src="/js/modules/stats.js"></script>
+    <script src="/js/modules/gwscanner-overtime.js"></script>
+    
+    <!-- Script aplikasi utama -->
+    <script src="/js/app.js"></script>
     
     <script>
         // Document ready
@@ -1318,6 +1407,7 @@
             
             // Load data awal jika tersedia fungsinya
             if (typeof refreshData === 'function') {
+                // Hanya refresh data sekali saat halaman dimuat
                 refreshData();
             }
             
@@ -1327,16 +1417,18 @@
             }
             
             // Load data history jika tersedia fungsinya
-                if (typeof loadHistoryDataAndUpdateTimeline === 'function') {
-                    loadHistoryDataAndUpdateTimeline();
-                }
+            if (typeof loadHistoryDataAndUpdateTimeline === 'function') {
+                loadHistoryDataAndUpdateTimeline();
+            }
             
-            // Set interval untuk refresh otomatis (setiap 5 menit)
+            // Set interval untuk refresh otomatis (setiap 30 menit, bukan 5 menit)
+            // Ini untuk mengurangi beban server dan menghindari refresh berulang
             setInterval(function() {
-                if (typeof refreshData === 'function') {
-                    refreshData();
+                if (typeof refreshAllData === 'function') {
+                    console.log('Auto-refreshing data (30-minute interval)');
+                    refreshAllData();
                 }
-            }, 5 * 60 * 1000);
+            }, 30 * 60 * 1000);
         });
 
         // Function to update loading status

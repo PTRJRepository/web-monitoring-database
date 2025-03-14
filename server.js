@@ -140,17 +140,17 @@ function saveTempData(type, data) {
         if (!fs.existsSync(tempDir)) {
             fs.mkdirSync(tempDir, { recursive: true });
         }
-
-        // Simpan data ke file temp
+        
         const tempFile = path.join(tempDir, `${type}_temp.json`);
-        fs.writeFileSync(tempFile, JSON.stringify({
-            timestamp: new Date(),
+        const tempData = {
+            timestamp: new Date().toISOString(),
             data: data
-        }));
-        console.log(`Saved temporary ${type} data`);
+        };
+        
+        fs.writeFileSync(tempFile, JSON.stringify(tempData, null, 2));
         return true;
-    } catch (error) {
-        console.error(`Error saving temporary ${type} data:`, error);
+    } catch (err) {
+        console.error(`Error saving temporary data for ${type}:`, err);
         return false;
     }
 }
@@ -160,10 +160,9 @@ function loadTempData(type) {
     try {
         const tempFile = path.join(tempDir, `${type}_temp.json`);
         if (fs.existsSync(tempFile)) {
-            console.log(`Loading temporary data from ${tempFile}`);
+            // Baca file tanpa log berlebihan
             const fileContent = fs.readFileSync(tempFile, 'utf8');
             const data = JSON.parse(fileContent);
-            console.log(`Loaded ${data.data ? data.data.length : 0} records from temporary file for ${type}`);
             
             // Pastikan data memiliki struktur yang benar
             if (!data.data) {
@@ -173,10 +172,11 @@ function loadTempData(type) {
             
             return data;
         }
-        console.log(`No temporary file found for ${type}`);
+        
+        console.log(`No temporary data found for ${type}`);
         return null;
-    } catch (error) {
-        console.error(`Error loading temporary ${type} data:`, error);
+    } catch (err) {
+        console.error(`Error loading temporary data for ${type}:`, err);
         return null;
     }
 }
@@ -493,113 +493,71 @@ app.get('/config', authMiddleware, (req, res) => {
     });
 });
 
+// Fungsi untuk memeriksa dan memperbarui data jika perlu
+async function checkAndRefreshData(type, refreshFunction, forceRefresh = false, refreshInterval = 5) {
+    const tempData = loadTempData(type);
+    
+    // Jika tidak ada data atau data sudah lebih dari interval yang ditentukan, perbarui data
+    if (!tempData || !tempData.timestamp || forceRefresh) {
+        console.log(`No data found for ${type} or force refresh requested, fetching from database...`);
+        const newData = await refreshFunction();
+        saveTempData(type, newData);
+        return newData;
+    }
+    
+    // Periksa timestamp data
+    const lastUpdate = new Date(tempData.timestamp);
+    const now = new Date();
+    const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
+    
+    // Jika data sudah lebih dari interval yang ditentukan, perbarui data
+    if (diffMinutes > refreshInterval) {
+        console.log(`Data for ${type} is older than ${refreshInterval} minutes (${Math.round(diffMinutes)} minutes old), refreshing from database...`);
+        const newData = await refreshFunction();
+        saveTempData(type, newData);
+        return newData;
+    }
+    
+    // Gunakan data yang sudah ada
+    console.log(`Using cached data for ${type} (${Math.round(diffMinutes)} minutes old)`);
+    return tempData.data;
+}
+
 // Tambahkan endpoint untuk mendapatkan data
 app.get('/api/data', async (req, res) => {
     try {
-        // Baca data dari file JSON
-        const tunjanganBerasPath = path.join(dataDir, 'tunjangan_beras_results.json');
-        const bpjsPath = path.join(dataDir, 'bpjs_results.json');
-        const gwscannerPath = path.join(dataDir, 'gwscanner_results.json');
-        const ffbworkerPath = path.join(dataDir, 'ffbworker_results.json');
-        
-        let tunjanganData = [];
-        let bpjsData = [];
-        let gwscannerData = [];
-        let ffbworkerData = [];
-        let lastUpdated = null;
-        
-        try {
-            if (fs.existsSync(tunjanganBerasPath)) {
-                const fileContent = JSON.parse(fs.readFileSync(tunjanganBerasPath, 'utf8'));
-                // Ambil data dari properti data jika ada
-                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
-                    tunjanganData = fileContent.data;
-                    lastUpdated = fileContent.lastUpdated;
-                } else if (Array.isArray(fileContent)) {
-                    // Fallback jika data disimpan langsung sebagai array
-                    tunjanganData = fileContent;
-                } else {
-                    console.warn('Tunjangan beras data is not in expected format, using empty array instead');
-                }
-            }
-        } catch (err) {
-            console.error('Error reading tunjangan beras data:', err);
-        }
-        
-        try {
-            if (fs.existsSync(bpjsPath)) {
-                const fileContent = JSON.parse(fs.readFileSync(bpjsPath, 'utf8'));
-                // Ambil data dari properti data jika ada
-                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
-                    bpjsData = fileContent.data;
-                    if (!lastUpdated) lastUpdated = fileContent.lastUpdated;
-                } else if (Array.isArray(fileContent)) {
-                    // Fallback jika data disimpan langsung sebagai array
-                    bpjsData = fileContent;
-                } else {
-                    console.warn('BPJS data is not in expected format, using empty array instead');
-                }
-            }
-        } catch (err) {
-            console.error('Error reading BPJS data:', err);
-        }
-        
-        try {
-            if (fs.existsSync(gwscannerPath)) {
-                const fileContent = JSON.parse(fs.readFileSync(gwscannerPath, 'utf8'));
-                // Ambil data dari properti data jika ada
-                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
-                    gwscannerData = fileContent.data;
-                    if (!lastUpdated) lastUpdated = fileContent.lastUpdated;
-                } else if (Array.isArray(fileContent)) {
-                    // Fallback jika data disimpan langsung sebagai array
-                    gwscannerData = fileContent;
-                } else {
-                    console.warn('GWScanner data is not in expected format, using empty array instead');
-                }
-            }
-        } catch (err) {
-            console.error('Error reading GWScanner data:', err);
-        }
-        
-        try {
-            if (fs.existsSync(ffbworkerPath)) {
-                const fileContent = JSON.parse(fs.readFileSync(ffbworkerPath, 'utf8'));
-                // Ambil data dari properti data jika ada
-                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
-                    ffbworkerData = fileContent.data;
-                    if (!lastUpdated) lastUpdated = fileContent.lastUpdated;
-                } else if (Array.isArray(fileContent)) {
-                    // Fallback jika data disimpan langsung sebagai array
-                    ffbworkerData = fileContent;
-                } else {
-                    console.warn('FFB Worker data is not in expected format, using empty array instead');
-                }
-            }
-        } catch (err) {
-            console.error('Error reading FFB Worker data:', err);
-        }
+        // Load data dengan pemeriksaan timestamp
+        const tunjanganData = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData);
+        const bpjsData = await checkAndRefreshData('bpjs', checkBpjsData);
+        const gwscannerData = await checkAndRefreshData('gwscanner', checkGwScannerData);
+        const ffbworkerData = await checkAndRefreshData('ffbworker', checkFfbWorkerData);
+        const gwscannerOvertimeNotSyncData = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData);
         
         console.log('API data request with data:');
-        console.log(`- Tunjangan beras: ${tunjanganData.length} records`);
-        console.log(`- BPJS: ${bpjsData.length} records`);
-        console.log(`- GWScanner: ${gwscannerData.length} records`);
-        console.log(`- FFB Worker: ${ffbworkerData.length} records`);
+        console.log(`- Tunjangan beras: ${tunjanganData ? tunjanganData.length : 0} records`);
+        console.log(`- BPJS: ${bpjsData ? bpjsData.length : 0} records`);
+        console.log(`- GWScanner: ${gwscannerData ? gwscannerData.length : 0} records`);
+        console.log(`- FFB Worker: ${ffbworkerData ? ffbworkerData.length : 0} records`);
+        console.log(`- GWScanner-Overtime Not Sync: ${gwscannerOvertimeNotSyncData ? gwscannerOvertimeNotSyncData.length : 0} records`);
         
         res.json({
             success: true,
-            dataReady: dataInitialized,
-            lastCheck: lastUpdated || formatDateTime(monitoringState.lastCheck),
-            data: tunjanganData,
-            bpjsData: bpjsData,
-            gwscannerData: gwscannerData,
-            ffbworkerData: ffbworkerData
+            data: {
+                tunjangan_beras: tunjanganData || [],
+                bpjs: bpjsData || [],
+                gwscanner: gwscannerData || [],
+                ffbworker: ffbworkerData || [],
+                gwscanner_overtime_not_sync: gwscannerOvertimeNotSyncData || []
+            },
+            lastCheck: formatDateTime(monitoringState.lastCheck),
+            lastEmail: formatDateTime(monitoringState.lastEmail),
+            isActive: monitoringState.isActive
         });
     } catch (error) {
-        console.error('Error getting data:', error);
+        console.error('Error loading data:', error);
         res.status(500).json({
             success: false,
-            error: 'Terjadi kesalahan saat memuat data'
+            error: 'Gagal memuat data'
         });
     }
 });
@@ -608,31 +566,43 @@ app.get('/api/data', async (req, res) => {
 app.get('/api/refresh-data', async (req, res) => {
     try {
         const dataType = req.query.type;
-        let data = [];
+        let recordCount = 0;
         
         console.log(`Refreshing data for type: ${dataType}`);
         
         if (dataType === 'tunjangan_beras') {
-            data = await dataModule.getTunjanganBerasData();
+            const data = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData, true);
+            recordCount = data.length;
         } else if (dataType === 'bpjs') {
-            data = await dataModule.getBPJSData();
+            const data = await checkAndRefreshData('bpjs', checkBpjsData, true);
+            recordCount = data.length;
         } else if (dataType === 'gwscanner') {
-            data = await dataModule.getGWScannerData();
+            const data = await checkAndRefreshData('gwscanner', checkGwScannerData, true);
+            recordCount = data.length;
         } else if (dataType === 'ffbworker') {
-            data = await dataModule.getFFBWorkerData();
+            const data = await checkAndRefreshData('ffbworker', checkFfbWorkerData, true);
+            recordCount = data.length;
+        } else if (dataType === 'gwscanner_overtime_not_sync') {
+            const data = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData, true);
+            recordCount = data.length;
         } else if (dataType === 'all') {
             // Refresh semua data
-            const tunjanganData = await dataModule.getTunjanganBerasData();
-            const bpjsData = await dataModule.getBPJSData();
-            const gwscannerData = await dataModule.getGWScannerData();
-            const ffbworkerData = await dataModule.getFFBWorkerData();
+            const tunjanganData = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData, true);
+            const bpjsData = await checkAndRefreshData('bpjs', checkBpjsData, true);
+            const gwscannerData = await checkAndRefreshData('gwscanner', checkGwScannerData, true);
+            const ffbworkerData = await checkAndRefreshData('ffbworker', checkFfbWorkerData, true);
+            const gwscannerOvertimeNotSyncData = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData, true);
             
-            data = {
+            recordCount = {
                 tunjangan_beras: tunjanganData.length,
                 bpjs: bpjsData.length,
                 gwscanner: gwscannerData.length,
-                ffbworker: ffbworkerData.length
+                ffbworker: ffbworkerData.length,
+                gwscanner_overtime_not_sync: gwscannerOvertimeNotSyncData.length
             };
+            
+            // Update waktu pemeriksaan terakhir
+            monitoringState.lastCheck = new Date();
         } else {
             return res.status(400).json({
                 success: false,
@@ -646,14 +616,13 @@ app.get('/api/refresh-data', async (req, res) => {
         res.json({
             success: true,
             message: `Data ${dataType} berhasil diperbarui`,
-            recordCount: Array.isArray(data) ? data.length : data,
-            timestamp: formatDateTime(new Date())
+            recordCount: recordCount
         });
     } catch (error) {
         console.error('Error refreshing data:', error);
         res.status(500).json({
             success: false,
-            error: 'Terjadi kesalahan saat memperbarui data'
+            error: 'Gagal memperbarui data'
         });
     }
 });
@@ -705,6 +674,9 @@ app.post('/run-query', authMiddleware, async (req, res) => {
                 break;
             case 'ffbworker':
                 result = await checkFfbWorkerData();
+                break;
+            case 'gwscanner_overtime_not_sync':
+                result = await checkGWScannerOvertimeSyncData();
                 break;
             default:
                 return res.status(400).json({
@@ -1007,23 +979,26 @@ async function checkFfbWorkerData() {
 // Modifikasi route utama untuk menggunakan data dari temporary file
 app.get('/', async (req, res) => {
     try {
-        // Load data dari temporary file
-        const tunjanganData = loadTempData('tunjangan_beras');
-        const bpjsData = loadTempData('bpjs');
-        const gwscannerData = loadTempData('gwscanner');
-        const ffbworkerData = loadTempData('ffbworker');
+        // Load data dengan pemeriksaan timestamp (interval 30 menit untuk halaman utama)
+        const tunjanganData = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData, false, 30);
+        const bpjsData = await checkAndRefreshData('bpjs', checkBpjsData, false, 30);
+        const gwscannerData = await checkAndRefreshData('gwscanner', checkGwScannerData, false, 30);
+        const ffbworkerData = await checkAndRefreshData('ffbworker', checkFfbWorkerData, false, 30);
+        const gwscannerOvertimeNotSyncData = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData, false, 30);
         
         console.log('Rendering index page with data:');
-        console.log(`- Tunjangan beras: ${tunjanganData && tunjanganData.data ? tunjanganData.data.length : 0} records`);
-        console.log(`- BPJS: ${bpjsData && bpjsData.data ? bpjsData.data.length : 0} records`);
-        console.log(`- GWScanner: ${gwscannerData && gwscannerData.data ? gwscannerData.data.length : 0} records`);
-        console.log(`- FFB Worker: ${ffbworkerData && ffbworkerData.data ? ffbworkerData.data.length : 0} records`);
+        console.log(`- Tunjangan beras: ${tunjanganData ? tunjanganData.length : 0} records`);
+        console.log(`- BPJS: ${bpjsData ? bpjsData.length : 0} records`);
+        console.log(`- GWScanner: ${gwscannerData ? gwscannerData.length : 0} records`);
+        console.log(`- FFB Worker: ${ffbworkerData ? ffbworkerData.length : 0} records`);
+        console.log(`- GWScanner-Overtime Not Sync: ${gwscannerOvertimeNotSyncData ? gwscannerOvertimeNotSyncData.length : 0} records`);
         
         res.render('index', { 
-            data: tunjanganData && tunjanganData.data ? tunjanganData.data : [],
-            bpjsData: bpjsData && bpjsData.data ? bpjsData.data : [],
-            gwscannerData: gwscannerData && gwscannerData.data ? gwscannerData.data : [],
-            ffbworkerData: ffbworkerData && ffbworkerData.data ? ffbworkerData.data : [],
+            data: tunjanganData || [],
+            bpjsData: bpjsData || [],
+            gwscannerData: gwscannerData || [],
+            ffbworkerData: ffbworkerData || [],
+            gwscannerOvertimeNotSyncData: gwscannerOvertimeNotSyncData || [],
             lastCheck: formatDateTime(monitoringState.lastCheck),
             lastEmail: formatDateTime(monitoringState.lastEmail),
             isActive: monitoringState.isActive,
@@ -1038,6 +1013,7 @@ app.get('/', async (req, res) => {
             bpjsData: [],
             gwscannerData: [],
             ffbworkerData: [],
+            gwscannerOvertimeNotSyncData: [],
             lastCheck: 'Error',
             lastEmail: 'Error',
             isActive: false,
@@ -1052,28 +1028,73 @@ async function initializeData() {
     try {
         console.log('Initializing data...');
         
-        // Jalankan semua query dan simpan ke temporary file
-        const tunjanganData = await checkTunjanganBerasData();
-        saveTempData('tunjangan_beras', tunjanganData);
-        console.log('Tunjangan beras data saved to temporary file');
+        // Periksa apakah data perlu diperbarui berdasarkan timestamp
+        const shouldRefreshData = (type) => {
+            const tempData = loadTempData(type);
+            if (!tempData || !tempData.timestamp) {
+                return true;
+            }
+            
+            const lastUpdate = new Date(tempData.timestamp);
+            const now = new Date();
+            const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
+            
+            return diffMinutes > 60; // Perbarui data jika sudah lebih dari 60 menit (1 jam)
+        };
         
-        const bpjsData = await checkBpjsData();
-        saveTempData('bpjs', bpjsData);
-        console.log('BPJS data saved to temporary file');
+        // Jalankan semua query jika diperlukan
+        if (shouldRefreshData('tunjangan_beras')) {
+            console.log('Initializing tunjangan_beras data...');
+            const tunjanganData = await checkTunjanganBerasData();
+            saveTempData('tunjangan_beras', tunjanganData);
+            console.log('Tunjangan beras data saved to temporary file');
+        } else {
+            console.log('Using existing tunjangan_beras data from temporary file');
+        }
         
-        const gwscannerData = await checkGwScannerData();
-        saveTempData('gwscanner', gwscannerData);
-        console.log('GWScanner data saved to temporary file');
+        if (shouldRefreshData('bpjs')) {
+            console.log('Initializing bpjs data...');
+            const bpjsData = await checkBpjsData();
+            saveTempData('bpjs', bpjsData);
+            console.log('BPJS data saved to temporary file');
+        } else {
+            console.log('Using existing bpjs data from temporary file');
+        }
         
-        const ffbworkerData = await checkFfbWorkerData();
-        saveTempData('ffbworker', ffbworkerData);
-        console.log('FFB Worker data saved to temporary file');
+        if (shouldRefreshData('gwscanner')) {
+            console.log('Initializing gwscanner data...');
+            const gwscannerData = await checkGwScannerData();
+            saveTempData('gwscanner', gwscannerData);
+            console.log('GWScanner data saved to temporary file');
+        } else {
+            console.log('Using existing gwscanner data from temporary file');
+        }
+        
+        if (shouldRefreshData('ffbworker')) {
+            console.log('Initializing ffbworker data...');
+            const ffbworkerData = await checkFfbWorkerData();
+            saveTempData('ffbworker', ffbworkerData);
+            console.log('FFB Worker data saved to temporary file');
+        } else {
+            console.log('Using existing ffbworker data from temporary file');
+        }
+        
+        if (shouldRefreshData('gwscanner_overtime_not_sync')) {
+            console.log('Initializing gwscanner_overtime_not_sync data...');
+            const gwscannerOvertimeNotSyncData = await checkGWScannerOvertimeSyncData();
+            saveTempData('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
+            console.log('GWScanner-Overtime not sync data saved to temporary file');
+        } else {
+            console.log('Using existing gwscanner_overtime_not_sync data from temporary file');
+        }
         
         // Set flag bahwa data sudah diinisialisasi
         dataInitialized = true;
         
-        console.log('All data initialized and saved to temporary files');
-        console.log('Server is now ready to serve requests');
+        // Update waktu pemeriksaan terakhir
+        monitoringState.lastCheck = new Date();
+        
+        console.log('All data initialized and ready to serve requests');
         
         return true;
     } catch (error) {
@@ -1134,40 +1155,83 @@ async function checkDataAndNotify() {
     try {
         console.log('Running all queries...');
         
-        // Jalankan semua query
-        const tunjanganData = await checkTunjanganBerasData();
-        saveTempData('tunjangan_beras', tunjanganData);
+        // Periksa apakah data perlu diperbarui berdasarkan timestamp
+        const shouldRefreshData = (type) => {
+            const tempData = loadTempData(type);
+            if (!tempData || !tempData.timestamp) {
+                return true;
+            }
+            
+            const lastUpdate = new Date(tempData.timestamp);
+            const now = new Date();
+            const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
+            
+            return diffMinutes > 60; // Perbarui data jika sudah lebih dari 60 menit (1 jam)
+        };
         
-        const bpjsData = await checkBpjsData();
-        saveTempData('bpjs', bpjsData);
+        // Jalankan semua query jika diperlukan
+        if (shouldRefreshData('tunjangan_beras')) {
+            console.log('Refreshing tunjangan_beras data (older than 1 hour)...');
+            const tunjanganData = await checkTunjanganBerasData();
+            saveTempData('tunjangan_beras', tunjanganData);
+        }
         
-        const gwscannerData = await checkGwScannerData();
-        saveTempData('gwscanner', gwscannerData);
+        if (shouldRefreshData('bpjs')) {
+            console.log('Refreshing bpjs data (older than 1 hour)...');
+            const bpjsData = await checkBpjsData();
+            saveTempData('bpjs', bpjsData);
+        }
         
-        const ffbworkerData = await checkFfbWorkerData();
-        saveTempData('ffbworker', ffbworkerData);
+        if (shouldRefreshData('gwscanner')) {
+            console.log('Refreshing gwscanner data (older than 1 hour)...');
+            const gwscannerData = await checkGwScannerData();
+            saveTempData('gwscanner', gwscannerData);
+        }
+        
+        if (shouldRefreshData('ffbworker')) {
+            console.log('Refreshing ffbworker data (older than 1 hour)...');
+            const ffbworkerData = await checkFfbWorkerData();
+            saveTempData('ffbworker', ffbworkerData);
+        }
+        
+        if (shouldRefreshData('gwscanner_overtime_not_sync')) {
+            console.log('Refreshing gwscanner_overtime_not_sync data (older than 1 hour)...');
+            const gwscannerOvertimeNotSyncData = await checkGWScannerOvertimeSyncData();
+            saveTempData('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
+        }
         
         // Set flag bahwa data sudah diinisialisasi
         dataInitialized = true;
         
+        // Update waktu pemeriksaan terakhir
+        monitoringState.lastCheck = new Date();
+        
         console.log('All queries completed successfully');
         
+        // Load data dari temporary file untuk notifikasi
+        const tunjanganData = loadTempData('tunjangan_beras');
+        const bpjsData = loadTempData('bpjs');
+        const gwscannerData = loadTempData('gwscanner');
+        const ffbworkerData = loadTempData('ffbworker');
+        const gwscannerOvertimeNotSyncData = loadTempData('gwscanner_overtime_not_sync');
+        
         return {
-            tunjanganData,
-            bpjsData,
-            gwscannerData,
-            ffbworkerData
+            tunjanganData: tunjanganData ? tunjanganData.data : [],
+            bpjsData: bpjsData ? bpjsData.data : [],
+            gwscannerData: gwscannerData ? gwscannerData.data : [],
+            ffbworkerData: ffbworkerData ? ffbworkerData.data : [],
+            gwscannerOvertimeNotSyncData: gwscannerOvertimeNotSyncData ? gwscannerOvertimeNotSyncData.data : []
         };
     } catch (error) {
-        console.error('Error running queries:', error);
-        throw error;
+        console.error('Error checking data:', error);
+        return null;
     }
 }
 
 // Endpoint untuk mendapatkan data history
 app.get('/api/history', (req, res) => {
     try {
-        const historyData = loadHistoryData();
+        const historyData = loadAllHistoryData();
         res.json({ success: true, data: historyData });
     } catch (error) {
         console.error('Error loading history data:', error);
@@ -1175,104 +1239,55 @@ app.get('/api/history', (req, res) => {
     }
 });
 
-// Fungsi untuk memuat data history
-function loadHistoryData() {
-    const historyDir = path.join(__dirname, 'history');
-    const historyFiles = fs.readdirSync(historyDir);
-    
-    const historyData = {
-        tunjangan_beras: [],
-        bpjs: [],
-        gwscanner: [],
-        ffbworker: []
-    };
-    
-    historyFiles.forEach(file => {
-        // Skip unified_history.json dan file yang bukan .json
-        if (!file.endsWith('.json') || file === 'unified_history.json') {
-            return;
+// Fungsi untuk memuat semua data history
+function loadAllHistoryData() {
+    try {
+        const historyData = {
+            tunjangan_beras: [],
+            bpjs: [],
+            gwscanner: [],
+            ffbworker: [],
+            gwscanner_overtime_not_sync: []
+        };
+        
+        if (fs.existsSync(historyDir)) {
+            const files = fs.readdirSync(historyDir);
+            
+            files.forEach(file => {
+                if (file.endsWith('.json')) {
+                    try {
+                        const filePath = path.join(historyDir, file);
+                        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                        
+                        // Ekstrak jenis data dari nama file
+                        const dataType = file.split('_')[0];
+                        
+                        if (historyData[dataType]) {
+                            historyData[dataType].push({
+                                timestamp: data.timestamp,
+                                recordCount: data.recordCount,
+                                filePath: filePath,
+                                fileName: file
+                            });
+                        }
+                    } catch (fileErr) {
+                        console.error(`Error processing history file ${file}:`, fileErr);
+                    }
+                }
+            });
+            
+            // Urutkan data berdasarkan timestamp (terbaru dulu)
+            Object.keys(historyData).forEach(key => {
+                historyData[key].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            });
         }
         
-        try {
-            const filePath = path.join(historyDir, file);
-            const stats = fs.statSync(filePath);
-            const fileSize = (stats.size / 1024).toFixed(2) + ' KB';
-            
-            // Pastikan format file sesuai dengan yang diharapkan
-            const parts = file.split('_');
-            if (parts.length < 2) {
-                console.warn(`Skipping file with invalid format: ${file}`);
-                return;
-            }
-            
-            // Baca dan parse file JSON
-            const fileContent = fs.readFileSync(filePath, 'utf8');
-            let data;
-            
-            try {
-                data = JSON.parse(fileContent);
-            } catch (e) {
-                console.error(`Error parsing JSON from ${file}:`, e);
-                return;
-            }
-            
-            // Ekstrak timestamp dari nama file atau gunakan waktu modifikasi file
-            let timestamp;
-            if (parts.length >= 3 && parts[1] && parts[2]) {
-                // Format: type_date_time.json
-                const dateTimePart = parts[1] + '_' + parts[2].replace('.json', '');
-                timestamp = dateTimePart;
-            } else {
-                // Gunakan waktu modifikasi file sebagai fallback
-                timestamp = moment(stats.mtime).format('YYYY-MM-DD_HH-mm-ss');
-            }
-            
-            const type = parts[0];
-            const count = data.data ? data.data.length : (data.recordCount || 0);
-            
-            // Tambahkan data ke kategori yang sesuai
-            if (type === 'tunjangan' || type === 'tunjangan_beras') {
-                historyData.tunjangan_beras.push({
-                    timestamp,
-                    file,
-                    size: fileSize,
-                    count
-                });
-            } else if (type === 'bpjs') {
-                historyData.bpjs.push({
-                    timestamp,
-                    file,
-                    size: fileSize,
-                    count
-                });
-            } else if (type === 'gwscanner') {
-                historyData.gwscanner.push({
-                    timestamp,
-                    file,
-                    size: fileSize,
-                    count
-                });
-            } else if (type === 'ffbworker') {
-                historyData.ffbworker.push({
-                    timestamp,
-                    file,
-                    size: fileSize,
-                    count
-                });
-            }
-        } catch (error) {
-            console.error(`Error processing file ${file}:`, error);
-        }
-    });
-    
-    // Sort by timestamp (newest first)
-    Object.keys(historyData).forEach(key => {
-        historyData[key].sort((a, b) => {
-            return new Date(b.timestamp) - new Date(a.timestamp);
-        });
-    });
-    
-    return historyData;
+        console.log(`Loaded history with ${Object.keys(historyData).length} categories`);
+        return historyData;
+    } catch (err) {
+        console.error('Error loading history data:', err);
+        return {};
+    }
 }
 
 // Endpoint untuk mendapatkan data history tertentu
@@ -1282,7 +1297,7 @@ app.get('/api/history-data', (req, res) => {
         
         // Jika file tidak diberikan, kembalikan semua data history
         if (!file) {
-            const historyData = loadHistoryData();
+            const historyData = loadAllHistoryData();
             return res.json({ success: true, data: historyData });
         }
         
@@ -1321,7 +1336,7 @@ app.get('/api/config/email', (req, res) => {
         
         // Hapus password dari respons untuk keamanan
         if (config.sender && config.sender.password) {
-            config.sender.password = '********';
+            config.sender = { ...config.sender, password: '********' };
         }
         
         res.json({ success: true, config });
@@ -1357,7 +1372,7 @@ app.post('/api/config/email', (req, res) => {
         
         // Hapus password dari respons untuk keamanan
         if (newConfig.sender && newConfig.sender.password) {
-            newConfig.sender.password = '********';
+            newConfig.sender = { ...newConfig.sender, password: '********' };
         }
         
         res.json({ success: true, config: newConfig });
@@ -1636,6 +1651,79 @@ app.post('/api/send-current-data', authMiddleware, async (req, res) => {
             success: false,
             error: `Gagal mengirim data: ${error.message}`
         });
+    }
+});
+
+// Fungsi untuk mengecek data GWScanner-Overtime
+async function checkGWScannerOvertimeSyncData() {
+    try {
+        console.log('Executing GWScanner-Overtime not sync query...');
+        const data = await dataModule.getNotSyncGWScannerOvertimeData();
+        console.log(`GWScanner-Overtime not sync query completed. Found ${data.length} records.`);
+        
+        // Update waktu pemeriksaan terakhir
+        monitoringState.lastCheck = new Date();
+        
+        return data;
+    } catch (err) {
+        console.error('Error checking GWScanner-Overtime not sync data:', err);
+        throw err;
+    }
+}
+
+// Tambahkan endpoint untuk mendapatkan konfigurasi
+app.get('/api/config', (req, res) => {
+    try {
+        // Baca file konfigurasi
+        const configPath = path.join(__dirname, 'config.json');
+        const configData = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, 'utf8')) : {};
+        
+        // Hapus informasi sensitif seperti password
+        if (configData.sender && configData.sender.password) {
+            configData.sender = { ...configData.sender, password: '********' };
+        }
+        
+        res.json(configData);
+    } catch (error) {
+        console.error('Error getting configuration:', error);
+        res.status(500).json({ success: false, error: 'Failed to get configuration' });
+    }
+});
+
+// Tambahkan endpoint untuk memperbarui konfigurasi
+app.post('/api/config', (req, res) => {
+    try {
+        const configPath = path.join(__dirname, 'config.json');
+        const currentConfig = fs.existsSync(configPath) ? JSON.parse(fs.readFileSync(configPath, 'utf8')) : {};
+        
+        // Ambil data dari request body
+        const { interval } = req.body;
+        
+        // Update hanya bagian interval jika ada
+        if (interval) {
+            currentConfig.interval = { ...currentConfig.interval, ...interval };
+        }
+        
+        // Simpan konfigurasi yang diperbarui
+        fs.writeFileSync(configPath, JSON.stringify(currentConfig, null, 2));
+        
+        // Restart monitoring dengan interval baru jika perlu
+        if (interval && interval.checkData) {
+            // Hentikan interval yang sedang berjalan
+            if (monitoringInterval) {
+                clearInterval(monitoringInterval);
+            }
+            
+            // Mulai interval baru
+            const checkInterval = parseInt(interval.checkData);
+            monitoringInterval = setInterval(checkData, checkInterval * 60 * 1000);
+            console.log(`Monitoring interval updated to ${checkInterval} minutes`);
+        }
+        
+        res.json({ success: true, message: 'Configuration updated successfully' });
+    } catch (error) {
+        console.error('Error updating configuration:', error);
+        res.status(500).json({ success: false, error: 'Failed to update configuration' });
     }
 });
 

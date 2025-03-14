@@ -18,16 +18,22 @@ $(document).ready(function() {
                 if (result.allDataReady) {
                     console.log('All data is ready for display');
                     initDataTables();
-                    refreshData();
+                    refreshData(); // Hanya refresh data sekali saat data siap
                     updateDataChart();
+                    // Sembunyikan status loading
+                    updateLoadingStatus(true);
                 } else {
                     console.log('Waiting for data to be ready...');
-                    setTimeout(waitForData, 2000); // Check again in 2 seconds
+                    // Tampilkan status loading
+                    updateLoadingStatus(false);
+                    // Cek lagi setelah 5 detik (lebih lama dari sebelumnya)
+                    setTimeout(waitForData, 5000);
                 }
             })
             .catch(function(error) {
                 console.error('Error checking data availability:', error);
-                setTimeout(waitForData, 5000); // Retry in 5 seconds if error
+                // Cek lagi setelah 10 detik jika terjadi error (lebih lama dari sebelumnya)
+                setTimeout(waitForData, 10000);
             });
     }
 
@@ -445,42 +451,42 @@ function refreshData() {
                 // Update waktu terakhir diperbarui
                 $('#lastUpdated').text(result.lastCheck || '-');
                 
-                if (result.dataReady) {
+                if (result.data) {
                     console.log('Data ready for display');
                     
                     // Update data tunjangan beras
-                    if (result.data && Array.isArray(result.data)) {
-                        console.log(`Updating tunjangan beras table with ${result.data.length} records`);
-                        updateTunjanganBerasTable(result.data);
+                    if (result.data.tunjangan_beras && Array.isArray(result.data.tunjangan_beras)) {
+                        console.log(`Updating tunjangan beras table with ${result.data.tunjangan_beras.length} records`);
+                        updateTunjanganBerasTable(result.data.tunjangan_beras);
                     } else {
-                        console.warn('No valid tunjangan beras data available:', result.data);
+                        console.warn('No valid tunjangan beras data available:', result.data.tunjangan_beras);
                         updateTunjanganBerasTable([]);
                     }
 
                     // Update data BPJS
-                    if (result.bpjsData && Array.isArray(result.bpjsData)) {
-                        console.log(`Updating BPJS table with ${result.bpjsData.length} records`);
-                        updateBpjsTable(result.bpjsData);
+                    if (result.data.bpjs && Array.isArray(result.data.bpjs)) {
+                        console.log(`Updating BPJS table with ${result.data.bpjs.length} records`);
+                        updateBpjsTable(result.data.bpjs);
                     } else {
-                        console.warn('No valid BPJS data available:', result.bpjsData);
+                        console.warn('No valid BPJS data available:', result.data.bpjs);
                         updateBpjsTable([]);
                     }
 
                     // Update data GWScanner
-                    if (result.gwscannerData && Array.isArray(result.gwscannerData)) {
-                        console.log(`Updating GWScanner table with ${result.gwscannerData.length} records`);
-                        updateGwScannerTable(result.gwscannerData);
+                    if (result.data.gwscanner && Array.isArray(result.data.gwscanner)) {
+                        console.log(`Updating GWScanner table with ${result.data.gwscanner.length} records`);
+                        updateGwScannerTable(result.data.gwscanner);
                     } else {
-                        console.warn('No valid GWScanner data available:', result.gwscannerData);
+                        console.warn('No valid GWScanner data available:', result.data.gwscanner);
                         updateGwScannerTable([]);
                     }
 
                     // Update data FFB Worker
-                    if (result.ffbworkerData && Array.isArray(result.ffbworkerData)) {
-                        console.log(`Updating FFB Worker table with ${result.ffbworkerData.length} records`);
-                        updateFfbWorkerTable(result.ffbworkerData);
+                    if (result.data.ffbworker && Array.isArray(result.data.ffbworker)) {
+                        console.log(`Updating FFB Worker table with ${result.data.ffbworker.length} records`);
+                        updateFfbWorkerTable(result.data.ffbworker);
                     } else {
-                        console.warn('No valid FFB Worker data available:', result.ffbworkerData);
+                        console.warn('No valid FFB Worker data available:', result.data.ffbworker);
                         updateFfbWorkerTable([]);
                     }
 
@@ -505,8 +511,8 @@ function refreshData() {
                     
                     console.log('Data refresh completed successfully');
                 } else {
-                    console.log('Waiting for data to be ready...');
-                    setTimeout(refreshData, 2000); // Try again in 2 seconds
+                    console.log('No data available in response');
+                    showToast('Warning', 'Tidak ada data yang tersedia', 'warning');
                 }
             } else {
                 console.error('Error in data refresh response:', result);

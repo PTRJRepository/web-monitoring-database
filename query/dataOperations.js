@@ -6,7 +6,8 @@ const {
     TUNJANGAN_BERAS_QUERY, 
     BPJS_QUERY, 
     DUPLICATE_GWSCANNER_QUERY, 
-    FFBWORKER_QUERY 
+    FFBWORKER_QUERY,
+    NOT_SYNC_GWSCANNER_OVERTIME_QUERY
 } = require('./index');
 
 // Path untuk file data
@@ -58,7 +59,8 @@ function loadAllHistoryData() {
             tunjangan_beras: [],
             bpjs: [],
             gwscanner: [],
-            ffbworker: []
+            ffbworker: [],
+            gwscanner_overtime_not_sync: []
         };
         
         if (fs.existsSync(historyDir)) {
@@ -208,11 +210,32 @@ function compareData(newData, oldData) {
     return { added, removed, changed };
 }
 
+// Fungsi untuk mendapatkan data yang tidak sinkron antara GWScanner dan Overtime
+async function getNotSyncGWScannerOvertimeData() {
+    try {
+        console.log('Executing GWScanner-Overtime not sync query...');
+        const data = await executeQuery(NOT_SYNC_GWSCANNER_OVERTIME_QUERY);
+        console.log(`GWScanner-Overtime not sync query completed. Found ${data.length} records.`);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('gwscanner_overtime_not_sync', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('gwscanner_overtime_not_sync', data);
+        
+        return data;
+    } catch (err) {
+        console.error('Error getting GWScanner-Overtime not sync data:', err);
+        throw err;
+    }
+}
+
 module.exports = {
     getTunjanganBerasData,
     getBPJSData,
     getGWScannerData,
     getFFBWorkerData,
+    getNotSyncGWScannerOvertimeData,
     saveQueryResultsToJson,
     saveQueryHistory,
     loadAllHistoryData,

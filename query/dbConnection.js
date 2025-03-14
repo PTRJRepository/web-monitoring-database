@@ -8,7 +8,7 @@ const dbConfigs = {
         user: 'sa',
         password: 'P@ssw0rd',
         server: '10.0.0.2,1888',
-        database: 'databsestaging_PTRJ_iFes_Plangtware',
+        database: 'staging_PTRJ_iFES_Plantware',
         options: {
             encrypt: false,
             trustServerCertificate: true,
@@ -25,7 +25,7 @@ const dbConfigs = {
         user: 'sa',
         password: 'P@ssw0rd',
         server: 'localhost',
-        database: 'databsestaging_PTRJ_iFes_Plangtware',
+        database: 'staging_PTRJ_iFES_Plantware',
         options: {
             encrypt: false,
             trustServerCertificate: true
@@ -59,22 +59,50 @@ async function getPool() {
 // Fungsi untuk menjalankan query dengan error handling
 async function executeQuery(query, params = {}) {
     try {
+        console.log('Executing SQL query...');
         const pool = await getPool();
-        const result = await pool.request()
-            .input('params', sql.VarChar, JSON.stringify(params))
-            .query(query);
-        return result.recordset;
+        
+        // Log query untuk debugging (hapus informasi sensitif)
+        const queryPreview = query.substring(0, 200) + (query.length > 200 ? '...' : '');
+        console.log(`Query preview: ${queryPreview}`);
+        
+        const request = pool.request();
+        
+        // Tambahkan parameter jika ada
+        if (Object.keys(params).length > 0) {
+            request.input('params', sql.VarChar, JSON.stringify(params));
+        }
+        
+        const result = await request.query(query);
+        console.log(`Query executed successfully. Returned ${result.recordset ? result.recordset.length : 0} records.`);
+        
+        return result.recordset || [];
     } catch (err) {
         console.error('Error executing query:', err);
-        throw err;
+        console.error('Error details:', err.message);
+        
+        // Jika error terkait koneksi database, coba buat koneksi baru
+        if (err.code === 'ETIMEOUT' || err.code === 'ECONNCLOSED' || err.code === 'ECONNRESET') {
+            console.log('Connection error detected. Resetting connection pool...');
+            pool = null; // Reset pool untuk membuat koneksi baru pada panggilan berikutnya
+        }
+        
+        // Return array kosong alih-alih throw error
+        console.log('Returning empty array due to query error');
+        return [];
     }
 }
 
 // Fungsi untuk mendapatkan query dari file
 function getQueryFromFile(filePath) {
     try {
-        const fullPath = path.resolve(__dirname, filePath);
-        return fs.readFileSync(fullPath, 'utf8');
+        // Gunakan filePath langsung karena sudah berupa path absolut
+        console.log(`Reading query file from: ${filePath}`);
+        if (!fs.existsSync(filePath)) {
+            console.error(`Query file not found: ${filePath}`);
+            throw new Error(`Query file not found: ${filePath}`);
+        }
+        return fs.readFileSync(filePath, 'utf8');
     } catch (err) {
         console.error(`Error reading query file ${filePath}:`, err);
         throw err;

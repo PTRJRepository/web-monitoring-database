@@ -1,0 +1,126 @@
+/**
+ * Styles for GWScanner-Overtime module
+ */
+
+/* Stats cards */
+.gwscanner-overtime-stats .stats-card {
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+    color: white;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.gwscanner-overtime-stats .stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.gwscanner-overtime-stats .stats-card .card-title {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 10px;
+}
+
+.gwscanner-overtime-stats .stats-card .card-text {
+    font-size: 1.8rem;
+    font-weight: 700;
+}
+
+/* Table styles */
+#gwscannerOvertimeTable {
+    width: 100%;
+    border-collapse: collapse;
+    border-spacing: 0;
+    margin-bottom: 1rem;
+}
+
+#gwscannerOvertimeTable thead th {
+    background-color: #f8f9fc;
+    color: #5a5c69;
+    font-weight: 600;
+    border-bottom: 2px solid #e3e6f0;
+    vertical-align: middle;
+    text-align: center;
+    white-space: normal;
+    word-wrap: break-word;
+    min-width: 100px;
+    max-width: 200px;
+    padding: 12px 8px;
+    font-size: 0.85rem;
+}
+
+#gwscannerOvertimeTable tbody td {
+    vertical-align: middle;
+    padding: 8px;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #e3e6f0;
+}
+
+/* Status styles - Khusus untuk data yang tidak sinkron */
+#gwscannerOvertimeTable tbody tr {
+    background-color: #fff3e0 !important; /* Warna default untuk data tidak sinkron */
+    border-left: 4px solid #f6c23e !important; /* Border kuning untuk data tidak sinkron */
+}
+
+#gwscannerOvertimeTable tbody tr td:first-child {
+    font-weight: bold;
+    color: #e65100; /* Warna oranye tua untuk status */
+}
+
+/* Highlight on hover */
+#gwscannerOvertimeTable tbody tr:hover {
+    background-color: #ffe0b2 !important; /* Warna oranye muda saat hover */
+    transition: background-color 0.2s ease;
+}
+
+/* Animation for new data */
+@keyframes newDataHighlight {
+    0% { background-color: #ffcc80; }
+    50% { background-color: #ffb74d; }
+    100% { background-color: #ffcc80; }
+}
+
+.new-data-highlight {
+    animation: newDataHighlight 2s ease;
+}
+
+/* Judul tabel */
+.card-header h5.card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #e65100;
+}
+
+.card-header .subtitle {
+    font-size: 0.9rem;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #gwscannerOvertimeTable thead th {
+        min-width: 80px;
+        padding: 8px 4px;
+        font-size: 0.8rem;
+    }
+    
+    #gwscannerOvertimeTable tbody td {
+        padding: 6px 4px;
+        font-size: 0.8rem;
+    }
+    
+    .gwscanner-overtime-stats .stats-card {
+        padding: 15px;
+    }
+    
+    .gwscanner-overtime-stats .stats-card .card-title {
+        font-size: 0.8rem;
+    }
+    
+    .gwscanner-overtime-stats .stats-card .card-text {
+        font-size: 1.5rem;
+    }
+} 
