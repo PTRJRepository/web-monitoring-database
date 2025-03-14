@@ -12,6 +12,17 @@ const session = require('express-session');
 const dbModule = require('./query/dbConnection');
 const dataModule = require('./query/dataOperations');
 
+// Definisi path untuk direktori data
+const dataDir = path.join(__dirname, 'public/data');
+const tempDir = path.join(__dirname, 'temp');
+
+// Pastikan direktori ada
+[dataDir, tempDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
 // Load configuration
 let appConfig;
 try {
@@ -119,18 +130,18 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(express.static('public'));
 
-// Tambahkan direktori untuk temporary files
-const tempDir = path.join(__dirname, 'temp');
-if (!fs.existsSync(tempDir)) {
-    fs.mkdirSync(tempDir, { recursive: true });
-}
-
 // Tambahkan variabel untuk menandai kesiapan data
 let dataInitialized = false;
 
 // Fungsi untuk menyimpan data ke temporary file
 function saveTempData(type, data) {
     try {
+        // Pastikan direktori temp ada
+        if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+        }
+
+        // Simpan data ke file temp
         const tempFile = path.join(tempDir, `${type}_temp.json`);
         fs.writeFileSync(tempFile, JSON.stringify({
             timestamp: new Date(),
@@ -199,68 +210,15 @@ function checkDataStatus() {
 
 // Modifikasi fungsi authMiddleware untuk menambahkan autentikasi konfigurasi
 function authMiddleware(req, res, next) {
-    // Daftar path yang memerlukan otentikasi
-    const protectedPaths = [
-        '/config',
-        '/api/email-config',
-        '/api/config/email',
-        '/api/config/email/toggle',
-        '/api/config/email/reset',
-        '/api/send-test-email',
-        '/api/send-current-data',
-        '/api/update-config-password',
-        '/run-query'
-    ];
-    
-    // Cek apakah path saat ini memerlukan otentikasi
-    const requiresAuth = protectedPaths.some(path => 
-        req.path === path || req.path.startsWith(path + '/')
-    );
-    
-    // Jika path memerlukan otentikasi dan belum login, redirect ke halaman login
-    if (requiresAuth && (!req.session || !req.session.isAuthenticated)) {
-        if (req.xhr || req.path.startsWith('/api/')) {
-            // Jika request AJAX atau API, kirim status 401
-            return res.status(401).json({ error: 'Unauthorized. Please login first.' });
-        }
-        return res.redirect('/login');
-    }
-    
-    // Jika akses ke halaman utama, pastikan data sudah diinisialisasi
-    if (req.path === '/' && !dataInitialized) {
-        return res.render('waiting', {
-            message: 'Sedang mempersiapkan data. Mohon tunggu sebentar...',
-            refreshUrl: '/check-data-status'
-        });
-    }
-    
+    // Bypass autentikasi untuk semua path
+    req.session = req.session || {};
+    req.session.isAuthenticated = true;
     next();
 }
 
 // Apply auth middleware hanya untuk path yang memerlukan otentikasi
 app.use((req, res, next) => {
-    // Daftar path yang memerlukan otentikasi
-    const protectedPaths = [
-        '/config',
-        '/api/email-config',
-        '/api/config/email',
-        '/api/config/email/toggle',
-        '/api/config/email/reset',
-        '/api/send-test-email',
-        '/api/send-current-data',
-        '/api/update-config-password',
-        '/run-query'
-    ];
-    
-    // Cek apakah path saat ini memerlukan otentikasi
-    const requiresAuth = protectedPaths.some(path => 
-        req.path === path || req.path.startsWith(path + '/')
-    );
-    
-    // Jika path memerlukan otentikasi, gunakan middleware auth
-    if (requiresAuth) {
-        return authMiddleware(req, res, next);
-    }
+    // Bypass autentikasi untuk semua path
     
     // Jika akses ke halaman utama, pastikan data sudah diinisialisasi
     if (req.path === '/' && !dataInitialized) {
@@ -309,13 +267,11 @@ const tunjanganBerasQueryPath = path.join(__dirname, 'query', 'Incorrect_Input_ 
 const bpjsQueryPath = path.join(__dirname, 'query', 'Not_Completed_BPJS.sql');
 const gwScannerQueryPath = path.join(__dirname, 'query', 'Find_Duplicate_GWScanner.sql');
 const ffbWorkerQueryPath = path.join(__dirname, 'query', 'FindLatetsPosEmpCode_CPTRX.sql');
-const skuhEmployeesQueryPath = path.join(__dirname, 'query', 'Find_SKUH_Employees.sql');
 
 const getTunjanganBerasQuery = fs.readFileSync(tunjanganBerasQueryPath, 'utf8');
 const getBpjsQuery = fs.readFileSync(bpjsQueryPath, 'utf8');
 const getGwScannerQuery = fs.readFileSync(gwScannerQueryPath, 'utf8');
 const getFfbWorkerQuery = fs.readFileSync(ffbWorkerQueryPath, 'utf8');
-const getSkuhEmployeesQuery = fs.readFileSync(skuhEmployeesQueryPath, 'utf8');
 
 // Email configuration
 let emailConfig = {
@@ -538,37 +494,166 @@ app.get('/config', authMiddleware, (req, res) => {
 });
 
 // Tambahkan endpoint untuk mendapatkan data
-app.get('/api/data', (req, res) => {
+app.get('/api/data', async (req, res) => {
     try {
-        // Load data dari temporary file
-        const tunjanganData = loadTempData('tunjangan_beras');
-        const bpjsData = loadTempData('bpjs');
-        const gwscannerData = loadTempData('gwscanner');
-        const ffbworkerData = loadTempData('ffbworker');
-        const skuhEmployeesData = loadTempData('skuh_employees');
+        // Baca data dari file JSON
+        const tunjanganBerasPath = path.join(dataDir, 'tunjangan_beras_results.json');
+        const bpjsPath = path.join(dataDir, 'bpjs_results.json');
+        const gwscannerPath = path.join(dataDir, 'gwscanner_results.json');
+        const ffbworkerPath = path.join(dataDir, 'ffbworker_results.json');
+        
+        let tunjanganData = [];
+        let bpjsData = [];
+        let gwscannerData = [];
+        let ffbworkerData = [];
+        let lastUpdated = null;
+        
+        try {
+            if (fs.existsSync(tunjanganBerasPath)) {
+                const fileContent = JSON.parse(fs.readFileSync(tunjanganBerasPath, 'utf8'));
+                // Ambil data dari properti data jika ada
+                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
+                    tunjanganData = fileContent.data;
+                    lastUpdated = fileContent.lastUpdated;
+                } else if (Array.isArray(fileContent)) {
+                    // Fallback jika data disimpan langsung sebagai array
+                    tunjanganData = fileContent;
+                } else {
+                    console.warn('Tunjangan beras data is not in expected format, using empty array instead');
+                }
+            }
+        } catch (err) {
+            console.error('Error reading tunjangan beras data:', err);
+        }
+        
+        try {
+            if (fs.existsSync(bpjsPath)) {
+                const fileContent = JSON.parse(fs.readFileSync(bpjsPath, 'utf8'));
+                // Ambil data dari properti data jika ada
+                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
+                    bpjsData = fileContent.data;
+                    if (!lastUpdated) lastUpdated = fileContent.lastUpdated;
+                } else if (Array.isArray(fileContent)) {
+                    // Fallback jika data disimpan langsung sebagai array
+                    bpjsData = fileContent;
+                } else {
+                    console.warn('BPJS data is not in expected format, using empty array instead');
+                }
+            }
+        } catch (err) {
+            console.error('Error reading BPJS data:', err);
+        }
+        
+        try {
+            if (fs.existsSync(gwscannerPath)) {
+                const fileContent = JSON.parse(fs.readFileSync(gwscannerPath, 'utf8'));
+                // Ambil data dari properti data jika ada
+                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
+                    gwscannerData = fileContent.data;
+                    if (!lastUpdated) lastUpdated = fileContent.lastUpdated;
+                } else if (Array.isArray(fileContent)) {
+                    // Fallback jika data disimpan langsung sebagai array
+                    gwscannerData = fileContent;
+                } else {
+                    console.warn('GWScanner data is not in expected format, using empty array instead');
+                }
+            }
+        } catch (err) {
+            console.error('Error reading GWScanner data:', err);
+        }
+        
+        try {
+            if (fs.existsSync(ffbworkerPath)) {
+                const fileContent = JSON.parse(fs.readFileSync(ffbworkerPath, 'utf8'));
+                // Ambil data dari properti data jika ada
+                if (fileContent && fileContent.data && Array.isArray(fileContent.data)) {
+                    ffbworkerData = fileContent.data;
+                    if (!lastUpdated) lastUpdated = fileContent.lastUpdated;
+                } else if (Array.isArray(fileContent)) {
+                    // Fallback jika data disimpan langsung sebagai array
+                    ffbworkerData = fileContent;
+                } else {
+                    console.warn('FFB Worker data is not in expected format, using empty array instead');
+                }
+            }
+        } catch (err) {
+            console.error('Error reading FFB Worker data:', err);
+        }
         
         console.log('API data request with data:');
-        console.log(`- Tunjangan beras: ${tunjanganData && tunjanganData.data ? tunjanganData.data.length : 0} records`);
-        console.log(`- BPJS: ${bpjsData && bpjsData.data ? bpjsData.data.length : 0} records`);
-        console.log(`- GWScanner: ${gwscannerData && gwscannerData.data ? gwscannerData.data.length : 0} records`);
-        console.log(`- FFB Worker: ${ffbworkerData && ffbworkerData.data ? ffbworkerData.data.length : 0} records`);
-        console.log(`- SKUH Employees: ${skuhEmployeesData && skuhEmployeesData.data ? skuhEmployeesData.data.length : 0} records`);
+        console.log(`- Tunjangan beras: ${tunjanganData.length} records`);
+        console.log(`- BPJS: ${bpjsData.length} records`);
+        console.log(`- GWScanner: ${gwscannerData.length} records`);
+        console.log(`- FFB Worker: ${ffbworkerData.length} records`);
         
         res.json({
             success: true,
             dataReady: dataInitialized,
-            lastCheck: formatDateTime(monitoringState.lastCheck),
-            data: tunjanganData && tunjanganData.data ? tunjanganData.data : [],
-            bpjsData: bpjsData && bpjsData.data ? bpjsData.data : [],
-            gwscannerData: gwscannerData && gwscannerData.data ? gwscannerData.data : [],
-            ffbworkerData: ffbworkerData && ffbworkerData.data ? ffbworkerData.data : [],
-            skuhEmployeesData: skuhEmployeesData && skuhEmployeesData.data ? skuhEmployeesData.data : []
+            lastCheck: lastUpdated || formatDateTime(monitoringState.lastCheck),
+            data: tunjanganData,
+            bpjsData: bpjsData,
+            gwscannerData: gwscannerData,
+            ffbworkerData: ffbworkerData
         });
     } catch (error) {
         console.error('Error getting data:', error);
         res.status(500).json({
             success: false,
             error: 'Terjadi kesalahan saat memuat data'
+        });
+    }
+});
+
+// Tambahkan endpoint untuk refresh data
+app.get('/api/refresh-data', async (req, res) => {
+    try {
+        const dataType = req.query.type;
+        let data = [];
+        
+        console.log(`Refreshing data for type: ${dataType}`);
+        
+        if (dataType === 'tunjangan_beras') {
+            data = await dataModule.getTunjanganBerasData();
+        } else if (dataType === 'bpjs') {
+            data = await dataModule.getBPJSData();
+        } else if (dataType === 'gwscanner') {
+            data = await dataModule.getGWScannerData();
+        } else if (dataType === 'ffbworker') {
+            data = await dataModule.getFFBWorkerData();
+        } else if (dataType === 'all') {
+            // Refresh semua data
+            const tunjanganData = await dataModule.getTunjanganBerasData();
+            const bpjsData = await dataModule.getBPJSData();
+            const gwscannerData = await dataModule.getGWScannerData();
+            const ffbworkerData = await dataModule.getFFBWorkerData();
+            
+            data = {
+                tunjangan_beras: tunjanganData.length,
+                bpjs: bpjsData.length,
+                gwscanner: gwscannerData.length,
+                ffbworker: ffbworkerData.length
+            };
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: 'Tipe data tidak valid'
+            });
+        }
+        
+        // Update waktu pemeriksaan terakhir
+        monitoringState.lastCheck = new Date();
+        
+        res.json({
+            success: true,
+            message: `Data ${dataType} berhasil diperbarui`,
+            recordCount: Array.isArray(data) ? data.length : data,
+            timestamp: formatDateTime(new Date())
+        });
+    } catch (error) {
+        console.error('Error refreshing data:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Terjadi kesalahan saat memperbarui data'
         });
     }
 });
@@ -718,7 +803,7 @@ app.post('/api/send-test-email', authMiddleware, async (req, res) => {
             service: 'gmail',
             auth: {
                 user: emailConfig.senderEmail,
-                pass: appConfig.email.sender.password
+                pass: appConfig.email?.sender?.password || "fxjioeubpjfruasy"
             }
         });
         
@@ -919,69 +1004,31 @@ async function checkFfbWorkerData() {
     }
 }
 
-// Modifikasi fungsi checkSkuhEmployeesData untuk memeriksa data karyawan dengan SalGradeCode SKUH
-async function checkSkuhEmployeesData() {
-    try {
-        console.log('Executing SKUH Employees query...');
-        const pool = await getPool();
-        const result = await pool.request().query(getSkuhEmployeesQuery);
-        
-        console.log(`SKUH Employees query completed. Found ${result.recordset.length} records.`);
-        
-        monitoringState.skuhEmployeesData = result.recordset;
-        
-        // Simpan data ke history
-        saveQueryHistory('skuh_employees', result.recordset);
-        
-        // Simpan hasil query ke file JSON untuk tampilan
-        saveQueryResultsToJson('skuh_employees', result.recordset);
-        
-        // Simpan ke temporary file
-        saveTempData('skuh_employees', result.recordset);
-        
-        return result.recordset;
-    } catch (err) {
-        console.error('Error checking SKUH Employees data:', err);
-        
-        // Jika terjadi error, gunakan data dari file temporary jika ada
-        const tempData = loadTempData('skuh_employees');
-        if (tempData && tempData.data.length > 0) {
-            console.log(`Using temporary data for skuh_employees (${tempData.data.length} records)`);
-            return tempData.data;
-        }
-        
-        throw err;
-    }
-}
-
 // Modifikasi route utama untuk menggunakan data dari temporary file
-app.get('/', authMiddleware, async (req, res) => {
+app.get('/', async (req, res) => {
     try {
         // Load data dari temporary file
         const tunjanganData = loadTempData('tunjangan_beras');
         const bpjsData = loadTempData('bpjs');
         const gwscannerData = loadTempData('gwscanner');
         const ffbworkerData = loadTempData('ffbworker');
-        const skuhEmployeesData = loadTempData('skuh_employees');
         
         console.log('Rendering index page with data:');
         console.log(`- Tunjangan beras: ${tunjanganData && tunjanganData.data ? tunjanganData.data.length : 0} records`);
         console.log(`- BPJS: ${bpjsData && bpjsData.data ? bpjsData.data.length : 0} records`);
         console.log(`- GWScanner: ${gwscannerData && gwscannerData.data ? gwscannerData.data.length : 0} records`);
         console.log(`- FFB Worker: ${ffbworkerData && ffbworkerData.data ? ffbworkerData.data.length : 0} records`);
-        console.log(`- SKUH Employees: ${skuhEmployeesData && skuhEmployeesData.data ? skuhEmployeesData.data.length : 0} records`);
         
         res.render('index', { 
             data: tunjanganData && tunjanganData.data ? tunjanganData.data : [],
             bpjsData: bpjsData && bpjsData.data ? bpjsData.data : [],
             gwscannerData: gwscannerData && gwscannerData.data ? gwscannerData.data : [],
             ffbworkerData: ffbworkerData && ffbworkerData.data ? ffbworkerData.data : [],
-            skuhEmployeesData: skuhEmployeesData && skuhEmployeesData.data ? skuhEmployeesData.data : [],
             lastCheck: formatDateTime(monitoringState.lastCheck),
             lastEmail: formatDateTime(monitoringState.lastEmail),
             isActive: monitoringState.isActive,
-            emailConfig,
-            dataReady: dataInitialized
+            dataReady: dataInitialized,
+            emailConfig
         });
     } catch (error) {
         console.error('Error rendering index page:', error);
@@ -991,12 +1038,11 @@ app.get('/', authMiddleware, async (req, res) => {
             bpjsData: [],
             gwscannerData: [],
             ffbworkerData: [],
-            skuhEmployeesData: [],
             lastCheck: 'Error',
             lastEmail: 'Error',
             isActive: false,
-            emailConfig,
-            dataReady: false
+            dataReady: false,
+            emailConfig
         });
     }
 });
@@ -1022,10 +1068,6 @@ async function initializeData() {
         const ffbworkerData = await checkFfbWorkerData();
         saveTempData('ffbworker', ffbworkerData);
         console.log('FFB Worker data saved to temporary file');
-        
-        const skuhEmployeesData = await checkSkuhEmployeesData();
-        saveTempData('skuh_employees', skuhEmployeesData);
-        console.log('SKUH Employees data saved to temporary file');
         
         // Set flag bahwa data sudah diinisialisasi
         dataInitialized = true;
@@ -1105,9 +1147,6 @@ async function checkDataAndNotify() {
         const ffbworkerData = await checkFfbWorkerData();
         saveTempData('ffbworker', ffbworkerData);
         
-        const skuhEmployeesData = await checkSkuhEmployeesData();
-        saveTempData('skuh_employees', skuhEmployeesData);
-        
         // Set flag bahwa data sudah diinisialisasi
         dataInitialized = true;
         
@@ -1117,8 +1156,7 @@ async function checkDataAndNotify() {
             tunjanganData,
             bpjsData,
             gwscannerData,
-            ffbworkerData,
-            skuhEmployeesData
+            ffbworkerData
         };
     } catch (error) {
         console.error('Error running queries:', error);
@@ -1242,8 +1280,10 @@ app.get('/api/history-data', (req, res) => {
     try {
         const { file } = req.query;
         
+        // Jika file tidak diberikan, kembalikan semua data history
         if (!file) {
-            return res.status(400).json({ success: false, error: 'File tidak ditemukan' });
+            const historyData = loadHistoryData();
+            return res.json({ success: true, data: historyData });
         }
         
         const filePath = path.join(__dirname, 'history', file);
@@ -1257,14 +1297,13 @@ app.get('/api/history-data', (req, res) => {
         
         try {
             data = JSON.parse(fileContent);
-        } catch (e) {
-            console.error(`Error parsing JSON from ${file}:`, e);
-            return res.status(500).json({ success: false, error: 'Error parsing JSON' });
+        } catch (err) {
+            return res.status(500).json({ success: false, error: 'Format file tidak valid' });
         }
         
         res.json({ success: true, data });
     } catch (error) {
-        console.error('Error loading history data:', error);
+        console.error('Error getting history data:', error);
         res.status(500).json({ success: false, error: 'Gagal memuat data history' });
     }
 });

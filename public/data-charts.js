@@ -171,7 +171,175 @@ $(document).ready(function() {
 
     // Set interval untuk refresh data otomatis setiap 1 jam
     setInterval(refreshData, 60 * 60 * 1000);
+
+    // Event listener untuk tombol ekspor Excel global
+    $('#exportExcelBtn').on('click', function() {
+        // Tampilkan indikator loading
+        const $btn = $(this);
+        const originalText = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i> Mengekspor...');
+        $btn.prop('disabled', true);
+        
+        // Dapatkan tab yang aktif
+        const activeTab = $('.tab-pane.active').attr('id');
+        console.log('Tab aktif:', activeTab);
+        
+        // Tentukan tabel mana yang akan diekspor berdasarkan tab aktif
+        let tableId;
+        let title;
+        switch(activeTab) {
+            case 'tunjangan-data':
+                tableId = '#dataTable';
+                title = 'Data Tunjangan Beras';
+                break;
+            case 'bpjs-data':
+                tableId = '#bpjsTable';
+                title = 'Data BPJS';
+                break;
+            case 'gwscanner-data':
+                tableId = '#gwscannerTable';
+                title = 'Data GWScanner';
+                break;
+            case 'ffbworker-data':
+                tableId = '#ffbworkerTable';
+                title = 'Data FFB Worker';
+                break;
+            default:
+                tableId = '#dataTable';
+                title = 'Data Monitoring';
+        }
+        
+        console.log('Mengekspor data dari tabel:', tableId);
+        
+        // Klik tombol ekspor Excel pada tabel yang aktif
+        setTimeout(function() {
+            try {
+                $(tableId).DataTable().buttons('.buttons-excel').trigger();
+                showToast('Sukses', 'Data berhasil diekspor ke Excel', 'success');
+            } catch (error) {
+                console.error('Error saat mengekspor data:', error);
+                showToast('Error', 'Gagal mengekspor data: ' + error.message, 'danger');
+            } finally {
+                // Kembalikan tombol ke keadaan semula
+                $btn.html(originalText);
+                $btn.prop('disabled', false);
+            }
+        }, 500);
+    });
+    
+    // Event listener untuk tombol ekspor PDF global
+    $('#exportPdfBtn').on('click', function() {
+        // Tampilkan indikator loading
+        const $btn = $(this);
+        const originalText = $btn.html();
+        $btn.html('<i class="fas fa-spinner fa-spin me-1"></i> Mengekspor...');
+        $btn.prop('disabled', true);
+        
+        // Dapatkan tab yang aktif
+        const activeTab = $('.tab-pane.active').attr('id');
+        console.log('Tab aktif:', activeTab);
+        
+        // Tentukan tabel mana yang akan diekspor berdasarkan tab aktif
+        let tableId;
+        switch(activeTab) {
+            case 'tunjangan-data':
+                tableId = '#dataTable';
+                break;
+            case 'bpjs-data':
+                tableId = '#bpjsTable';
+                break;
+            case 'gwscanner-data':
+                tableId = '#gwscannerTable';
+                break;
+            case 'ffbworker-data':
+                tableId = '#ffbworkerTable';
+                break;
+            default:
+                tableId = '#dataTable';
+        }
+        
+        console.log('Mengekspor data dari tabel:', tableId);
+        
+        // Klik tombol ekspor PDF pada tabel yang aktif
+        setTimeout(function() {
+            try {
+                $(tableId).DataTable().buttons('.buttons-pdf').trigger();
+                showToast('Sukses', 'Data berhasil diekspor ke PDF', 'success');
+            } catch (error) {
+                console.error('Error saat mengekspor data:', error);
+                showToast('Error', 'Gagal mengekspor data: ' + error.message, 'danger');
+            } finally {
+                // Kembalikan tombol ke keadaan semula
+                $btn.html(originalText);
+                $btn.prop('disabled', false);
+            }
+        }, 500);
+    });
 });
+
+// Fungsi untuk menampilkan notifikasi toast
+function showToast(title, message, type) {
+    // Buat elemen toast
+    const toastId = 'toast-' + Date.now();
+    const toast = `
+        <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <strong>${title}</strong>: ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+    
+    // Tambahkan toast ke container
+    if ($('.toast-container').length === 0) {
+        $('body').append('<div class="toast-container position-fixed top-0 end-0 p-3"></div>');
+    }
+    $('.toast-container').append(toast);
+    
+    // Tampilkan toast
+    const toastElement = new bootstrap.Toast(document.getElementById(toastId), {
+        delay: 3000
+    });
+    toastElement.show();
+    
+    // Hapus toast setelah ditutup
+    $(`#${toastId}`).on('hidden.bs.toast', function() {
+        $(this).remove();
+    });
+}
+
+// Fungsi untuk menampilkan loading
+function showLoading(message) {
+    // Jika sudah ada loading overlay, update pesan saja
+    if ($('#loadingOverlay').length > 0) {
+        $('#loadingMessage').text(message);
+        return;
+    }
+    
+    // Buat loading overlay
+    const overlay = `
+        <div id="loadingOverlay" class="loading-overlay">
+            <div class="loading-content">
+                <div class="spinner-border text-light" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p id="loadingMessage" class="mt-2">${message}</p>
+            </div>
+        </div>
+    `;
+    
+    // Tambahkan ke body
+    $('body').append(overlay);
+}
+
+// Fungsi untuk menyembunyikan loading
+function hideLoading() {
+    $('#loadingOverlay').fadeOut(300, function() {
+        $(this).remove();
+    });
+}
 
 // Fungsi untuk memperbarui grafik data
 function updateDataChart() {
@@ -274,39 +442,46 @@ function refreshData() {
             console.log('Data refresh response:', result);
 
             if (result && result.success) {
+                // Update waktu terakhir diperbarui
+                $('#lastUpdated').text(result.lastCheck || '-');
+                
                 if (result.dataReady) {
                     console.log('Data ready for display');
                     
                     // Update data tunjangan beras
-                    if (result.data) {
+                    if (result.data && Array.isArray(result.data)) {
                         console.log(`Updating tunjangan beras table with ${result.data.length} records`);
                         updateTunjanganBerasTable(result.data);
                     } else {
-                        console.warn('No tunjangan beras data available');
+                        console.warn('No valid tunjangan beras data available:', result.data);
+                        updateTunjanganBerasTable([]);
                     }
 
                     // Update data BPJS
-                    if (result.bpjsData) {
+                    if (result.bpjsData && Array.isArray(result.bpjsData)) {
                         console.log(`Updating BPJS table with ${result.bpjsData.length} records`);
                         updateBpjsTable(result.bpjsData);
                     } else {
-                        console.warn('No BPJS data available');
+                        console.warn('No valid BPJS data available:', result.bpjsData);
+                        updateBpjsTable([]);
                     }
 
                     // Update data GWScanner
-                    if (result.gwscannerData) {
+                    if (result.gwscannerData && Array.isArray(result.gwscannerData)) {
                         console.log(`Updating GWScanner table with ${result.gwscannerData.length} records`);
                         updateGwScannerTable(result.gwscannerData);
                     } else {
-                        console.warn('No GWScanner data available');
+                        console.warn('No valid GWScanner data available:', result.gwscannerData);
+                        updateGwScannerTable([]);
                     }
 
                     // Update data FFB Worker
-                    if (result.ffbworkerData) {
+                    if (result.ffbworkerData && Array.isArray(result.ffbworkerData)) {
                         console.log(`Updating FFB Worker table with ${result.ffbworkerData.length} records`);
                         updateFfbWorkerTable(result.ffbworkerData);
                     } else {
-                        console.warn('No FFB Worker data available');
+                        console.warn('No valid FFB Worker data available:', result.ffbworkerData);
+                        updateFfbWorkerTable([]);
                     }
 
                     // Update status
@@ -377,9 +552,70 @@ function initDataTables() {
         }
         $('#dataTable').DataTable({
             responsive: true,
-            dom: 'Bfrtip',
+            dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"p>>i',
             buttons: [
-                'copy', 'excel', 'pdf', 'print'
+                {
+                    extend: 'collection',
+                    text: '<i class="fas fa-download"></i> Ekspor',
+                    className: 'btn btn-sm btn-primary',
+                    buttons: [
+                        {
+                            extend: 'copy',
+                            text: '<i class="fas fa-copy"></i> Salin',
+                            className: 'btn-sm',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'excel',
+                            text: '<i class="fas fa-file-excel"></i> Excel',
+                            className: 'btn-sm',
+                            title: 'Data Tunjangan Beras - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'pdf',
+                            text: '<i class="fas fa-file-pdf"></i> PDF',
+                            className: 'btn-sm',
+                            title: 'Data Tunjangan Beras - ' + new Date().toLocaleDateString(),
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'print',
+                            text: '<i class="fas fa-print"></i> Print',
+                            className: 'btn-sm',
+                            title: 'Data Tunjangan Beras - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            customize: function(win) {
+                                $(win.document.body).css('font-size', '10pt');
+                                $(win.document.body).find('table').addClass('compact').css('font-size', 'inherit');
+                            }
+                        },
+                        {
+                            extend: 'csv',
+                            text: '<i class="fas fa-file-csv"></i> CSV',
+                            className: 'btn-sm',
+                            title: 'Data Tunjangan Beras - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        }
+                    ]
+                },
+                {
+                    extend: 'colvis',
+                    text: '<i class="fas fa-columns"></i> Kolom',
+                    className: 'btn btn-sm btn-secondary'
+                }
             ],
             columnDefs: [
                 { 'defaultContent': '-', 'targets': '_all' }
@@ -406,9 +642,70 @@ function initDataTables() {
         }
         $('#bpjsTable').DataTable({
             responsive: true,
-            dom: 'Bfrtip',
+            dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"p>>i',
             buttons: [
-                'copy', 'excel', 'pdf', 'print'
+                {
+                    extend: 'collection',
+                    text: '<i class="fas fa-download"></i> Ekspor',
+                    className: 'btn btn-sm btn-primary',
+                    buttons: [
+                        {
+                            extend: 'copy',
+                            text: '<i class="fas fa-copy"></i> Salin',
+                            className: 'btn-sm',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'excel',
+                            text: '<i class="fas fa-file-excel"></i> Excel',
+                            className: 'btn-sm',
+                            title: 'Data BPJS - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'pdf',
+                            text: '<i class="fas fa-file-pdf"></i> PDF',
+                            className: 'btn-sm',
+                            title: 'Data BPJS - ' + new Date().toLocaleDateString(),
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'print',
+                            text: '<i class="fas fa-print"></i> Print',
+                            className: 'btn-sm',
+                            title: 'Data BPJS - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            customize: function(win) {
+                                $(win.document.body).css('font-size', '10pt');
+                                $(win.document.body).find('table').addClass('compact').css('font-size', 'inherit');
+                            }
+                        },
+                        {
+                            extend: 'csv',
+                            text: '<i class="fas fa-file-csv"></i> CSV',
+                            className: 'btn-sm',
+                            title: 'Data BPJS - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        }
+                    ]
+                },
+                {
+                    extend: 'colvis',
+                    text: '<i class="fas fa-columns"></i> Kolom',
+                    className: 'btn btn-sm btn-secondary'
+                }
             ],
             columnDefs: [
                 { 'defaultContent': '-', 'targets': '_all' }
@@ -435,9 +732,70 @@ function initDataTables() {
         }
         $('#gwscannerTable').DataTable({
             responsive: true,
-            dom: 'Bfrtip',
+            dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"p>>i',
             buttons: [
-                'copy', 'excel', 'pdf', 'print'
+                {
+                    extend: 'collection',
+                    text: '<i class="fas fa-download"></i> Ekspor',
+                    className: 'btn btn-sm btn-primary',
+                    buttons: [
+                        {
+                            extend: 'copy',
+                            text: '<i class="fas fa-copy"></i> Salin',
+                            className: 'btn-sm',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'excel',
+                            text: '<i class="fas fa-file-excel"></i> Excel',
+                            className: 'btn-sm',
+                            title: 'Data GWScanner - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'pdf',
+                            text: '<i class="fas fa-file-pdf"></i> PDF',
+                            className: 'btn-sm',
+                            title: 'Data GWScanner - ' + new Date().toLocaleDateString(),
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'print',
+                            text: '<i class="fas fa-print"></i> Print',
+                            className: 'btn-sm',
+                            title: 'Data GWScanner - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            customize: function(win) {
+                                $(win.document.body).css('font-size', '10pt');
+                                $(win.document.body).find('table').addClass('compact').css('font-size', 'inherit');
+                            }
+                        },
+                        {
+                            extend: 'csv',
+                            text: '<i class="fas fa-file-csv"></i> CSV',
+                            className: 'btn-sm',
+                            title: 'Data GWScanner - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        }
+                    ]
+                },
+                {
+                    extend: 'colvis',
+                    text: '<i class="fas fa-columns"></i> Kolom',
+                    className: 'btn btn-sm btn-secondary'
+                }
             ],
             columnDefs: [
                 { 'defaultContent': '-', 'targets': '_all' }
@@ -464,9 +822,70 @@ function initDataTables() {
         }
         $('#ffbworkerTable').DataTable({
             responsive: true,
-            dom: 'Bfrtip',
+            dom: '<"row"<"col-sm-12 col-md-6"B><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"p>>i',
             buttons: [
-                'copy', 'excel', 'pdf', 'print'
+                {
+                    extend: 'collection',
+                    text: '<i class="fas fa-download"></i> Ekspor',
+                    className: 'btn btn-sm btn-primary',
+                    buttons: [
+                        {
+                            extend: 'copy',
+                            text: '<i class="fas fa-copy"></i> Salin',
+                            className: 'btn-sm',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'excel',
+                            text: '<i class="fas fa-file-excel"></i> Excel',
+                            className: 'btn-sm',
+                            title: 'Data FFB Worker - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'pdf',
+                            text: '<i class="fas fa-file-pdf"></i> PDF',
+                            className: 'btn-sm',
+                            title: 'Data FFB Worker - ' + new Date().toLocaleDateString(),
+                            orientation: 'landscape',
+                            pageSize: 'A4',
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        },
+                        {
+                            extend: 'print',
+                            text: '<i class="fas fa-print"></i> Print',
+                            className: 'btn-sm',
+                            title: 'Data FFB Worker - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            },
+                            customize: function(win) {
+                                $(win.document.body).css('font-size', '10pt');
+                                $(win.document.body).find('table').addClass('compact').css('font-size', 'inherit');
+                            }
+                        },
+                        {
+                            extend: 'csv',
+                            text: '<i class="fas fa-file-csv"></i> CSV',
+                            className: 'btn-sm',
+                            title: 'Data FFB Worker - ' + new Date().toLocaleDateString(),
+                            exportOptions: {
+                                columns: ':visible'
+                            }
+                        }
+                    ]
+                },
+                {
+                    extend: 'colvis',
+                    text: '<i class="fas fa-columns"></i> Kolom',
+                    className: 'btn btn-sm btn-secondary'
+                }
             ],
             columnDefs: [
                 { 'defaultContent': '-', 'targets': '_all' }
@@ -487,6 +906,34 @@ function initDataTables() {
             }
         });
 
+        // Tambahkan event listener untuk tombol ekspor data
+        $('#exportData').on('click', function() {
+            // Dapatkan tab yang aktif
+            const activeTab = $('.tab-pane.active').attr('id');
+            
+            // Tentukan tabel mana yang akan diekspor berdasarkan tab aktif
+            let tableId;
+            switch(activeTab) {
+                case 'tunjangan-data':
+                    tableId = '#dataTable';
+                    break;
+                case 'bpjs-data':
+                    tableId = '#bpjsTable';
+                    break;
+                case 'gwscanner-data':
+                    tableId = '#gwscannerTable';
+                    break;
+                case 'ffbworker-data':
+                    tableId = '#ffbworkerTable';
+                    break;
+                default:
+                    tableId = '#dataTable';
+            }
+            
+            // Klik tombol ekspor pada tabel yang aktif
+            $(tableId).DataTable().buttons('.buttons-excel').trigger();
+        });
+
         console.log('DataTables initialized successfully');
     } catch (error) {
         console.error('Error initializing DataTables:', error);
@@ -496,6 +943,17 @@ function initDataTables() {
 // Fungsi untuk memperbarui tabel tunjangan beras
 function updateTunjanganBerasTable(data) {
     console.log('Updating tunjangan beras table with data:', data);
+    
+    // Validasi data
+    if (!data) {
+        console.error('Data tunjangan beras adalah null atau undefined');
+        data = [];
+    }
+    
+    if (!Array.isArray(data)) {
+        console.error('Data tunjangan beras bukan array:', typeof data);
+        data = [];
+    }
     
     // Hapus semua data yang ada
     const table = $('#dataTable').DataTable();
@@ -511,7 +969,12 @@ function updateTunjanganBerasTable(data) {
             }
             
             try {
-                table.row.add([
+                // Tentukan status perbandingan
+                const perbandingan = item.Perbandingan_RiceRation || 
+                    (item.RiceRation_Aktual === item.RiceRation_Seharusnya ? 'Sama' : 'Beda');
+                
+                // Tambahkan data ke tabel
+                const rowNode = table.row.add([
                     item.EmpCode || '-',
                     item.EmpName || '-',
                     item.SalGradeCode || '',
@@ -549,8 +1012,21 @@ function updateTunjanganBerasTable(data) {
                     item.Status_Tunjangan || '-',
                     item.RiceRation_Seharusnya || '-',
                     item.Selisih_RiceRation || '-',
-                    item.Perbandingan_RiceRation || '-'
-                ]);
+                    perbandingan
+                ]).node();
+                
+                // Tambahkan kelas untuk baris yang memiliki perbedaan
+                if (perbandingan === 'Beda') {
+                    $(rowNode).addClass('error-row');
+                }
+                
+                // Tambahkan kelas untuk baris yang memiliki status validasi salah
+                const hasValidationError = ['Status_Validasi1', 'Status_Validasi2', 'Status_Validasi3', 'Status_Validasi4', 'Status_Validasi5']
+                    .some(field => item[field] && item[field].startsWith('Salah'));
+                
+                if (hasValidationError) {
+                    $(rowNode).addClass('warning-row');
+                }
             } catch (error) {
                 console.error('Error adding row:', error, 'Item:', item);
             }
@@ -569,7 +1045,12 @@ function updateTunjanganBerasTable(data) {
 
     // Update statistik
     $('#totalData').text(data ? data.length : 0);
-    $('#errorData').text(data ? data.filter(item => item.Perbandingan_RiceRation === 'Beda').length : 0);
+    $('#errorData').text(data ? data.filter(item => {
+        // Cek apakah ada perbedaan antara RiceRation_Aktual dan RiceRation_Seharusnya
+        const perbandingan = item.Perbandingan_RiceRation || 
+            (item.RiceRation_Aktual === item.RiceRation_Seharusnya ? 'Sama' : 'Beda');
+        return perbandingan === 'Beda';
+    }).length : 0);
     
     console.log('Tunjangan beras table update completed');
 }
@@ -685,9 +1166,9 @@ function refreshSpecificData(dataType) {
     showLoading(`Memuat data ${dataType}...`);
 
     $.ajax({
-        url: '/run-query',
-        method: 'POST',
-        data: { queryType: dataType },
+        url: '/api/refresh-data',
+        method: 'GET',
+        data: { type: dataType },
         dataType: 'json',
         success: function(result) {
             hideLoading();
@@ -695,7 +1176,7 @@ function refreshSpecificData(dataType) {
             if (result && result.success) {
                 // Refresh data setelah query berhasil dijalankan
                 refreshData();
-                showToast('Sukses', `Data ${dataType} berhasil diperbarui`, 'success');
+                showToast('Sukses', `Data ${dataType} berhasil diperbarui (${result.recordCount} data)`, 'success');
             } else {
                 showToast('Error', result.error || `Gagal memuat data ${dataType}`, 'danger');
             }
@@ -708,7 +1189,7 @@ function refreshSpecificData(dataType) {
     });
 }
 
-// Event listener untuk tombol refresh data
+// Event listener untuk tombol refresh
 $(document).ready(function() {
     // Inisialisasi DataTables
     initDataTables();
@@ -722,6 +1203,11 @@ $(document).ready(function() {
     // Event listener untuk tombol refresh
     $('#refreshBtn').on('click', function() {
         refreshData();
+    });
+
+    // Event listener untuk tombol refresh semua data
+    $('#refreshAllBtn').on('click', function() {
+        refreshSpecificData('all');
     });
 
     // Event listener untuk tombol refresh tunjangan beras

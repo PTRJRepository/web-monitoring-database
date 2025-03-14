@@ -5,26 +5,16 @@ const { executeQuery, getQueryFromFile } = require('./dbConnection');
 const { 
     TUNJANGAN_BERAS_QUERY, 
     BPJS_QUERY, 
-    GWSCANNER_QUERY, 
+    DUPLICATE_GWSCANNER_QUERY, 
     FFBWORKER_QUERY 
-} = require('./sqlQueries');
-
-// Path untuk file query
-const queryPaths = {
-    tunjangan_beras: './tunjanganBeras/Incorrect_Input_Jatah_Beras_Based_Employee_Child_Count_Ages.sql',
-    bpjs: './bpjs/Not_Completed_BPJS.sql',
-    gwscanner: './gwscanner/Find_Duplicate_GWScanner.sql',
-    ffbworker: './FindLatetsPosEmpCode_CPTRX.sql',
-    skuh_employees: './Find_SKUH_Employees.sql'
-};
+} = require('./index');
 
 // Path untuk file data
 const dataDir = path.join(__dirname, '../public/data');
 const historyDir = path.join(__dirname, '../history');
-const tempDir = path.join(__dirname, '../temp');
 
 // Pastikan direktori ada
-[dataDir, historyDir, tempDir].forEach(dir => {
+[dataDir, historyDir].forEach(dir => {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
     }
@@ -38,36 +28,6 @@ function saveQueryResultsToJson(dataType, data) {
         console.log(`Saved query results to ${filePath} for display`);
     } catch (err) {
         console.error(`Error saving ${dataType} results to JSON:`, err);
-    }
-}
-
-// Fungsi untuk menyimpan data ke file temporary
-function saveTempData(dataType, data) {
-    try {
-        const filePath = path.join(tempDir, `${dataType}_temp.json`);
-        const tempData = {
-            timestamp: new Date().toISOString(),
-            data: data
-        };
-        fs.writeFileSync(filePath, JSON.stringify(tempData, null, 2));
-        console.log(`Saved temporary ${dataType} data`);
-    } catch (err) {
-        console.error(`Error saving temporary ${dataType} data:`, err);
-    }
-}
-
-// Fungsi untuk memuat data dari file temporary
-function loadTempData(dataType) {
-    try {
-        const filePath = path.join(tempDir, `${dataType}_temp.json`);
-        if (fs.existsSync(filePath)) {
-            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            return data;
-        }
-        return null;
-    } catch (err) {
-        console.error(`Error loading temporary ${dataType} data:`, err);
-        return null;
     }
 }
 
@@ -88,44 +48,6 @@ function saveQueryHistory(dataType, data) {
     } catch (err) {
         console.error(`Error saving ${dataType} history:`, err);
         return null;
-    }
-}
-
-// Fungsi untuk menjalankan query berdasarkan jenis
-async function runQueryByType(dataType, params = {}) {
-    try {
-        if (!queryPaths[dataType]) {
-            throw new Error(`Query path not defined for data type: ${dataType}`);
-        }
-        
-        const queryPath = queryPaths[dataType];
-        const query = getQueryFromFile(queryPath);
-        
-        console.log(`Executing ${dataType} query...`);
-        const result = await executeQuery(query, params);
-        console.log(`${dataType} query completed. Found ${result.length} records.`);
-        
-        // Simpan data ke history
-        saveQueryHistory(dataType, result);
-        
-        // Simpan hasil query ke file JSON untuk tampilan
-        saveQueryResultsToJson(dataType, result);
-        
-        // Simpan ke temporary file
-        saveTempData(dataType, result);
-        
-        return result;
-    } catch (err) {
-        console.error(`Error running ${dataType} query:`, err);
-        
-        // Jika terjadi error, gunakan data dari file temporary jika ada
-        const tempData = loadTempData(dataType);
-        if (tempData && tempData.data.length > 0) {
-            console.log(`Using temporary data for ${dataType} (${tempData.data.length} records)`);
-            return tempData.data;
-        }
-        
-        throw err;
     }
 }
 
@@ -198,6 +120,13 @@ async function getTunjanganBerasData() {
     try {
         // Menggunakan query dari file SQL
         const data = await executeQuery(TUNJANGAN_BERAS_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('tunjangan_beras', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('tunjangan_beras', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting tunjangan beras data:', err);
@@ -209,6 +138,13 @@ async function getTunjanganBerasData() {
 async function getBPJSData() {
     try {
         const data = await executeQuery(BPJS_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('bpjs', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('bpjs', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting BPJS data:', err);
@@ -219,7 +155,14 @@ async function getBPJSData() {
 // Fungsi untuk mendapatkan data GWScanner
 async function getGWScannerData() {
     try {
-        const data = await executeQuery(GWSCANNER_QUERY);
+        const data = await executeQuery(DUPLICATE_GWSCANNER_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('gwscanner', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('gwscanner', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting GWScanner data:', err);
@@ -231,37 +174,16 @@ async function getGWScannerData() {
 async function getFFBWorkerData() {
     try {
         const data = await executeQuery(FFBWORKER_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('ffbworker', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('ffbworker', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting FFB Worker data:', err);
-        throw err;
-    }
-}
-
-// Fungsi untuk menyimpan data ke file JSON
-async function saveDataToFile(data, filename) {
-    try {
-        const fs = require('fs').promises;
-        await fs.writeFile(filename, JSON.stringify(data, null, 2));
-        console.log(`Data saved to ${filename}`);
-    } catch (err) {
-        console.error(`Error saving data to ${filename}:`, err);
-        throw err;
-    }
-}
-
-// Fungsi untuk membaca data dari file JSON
-async function loadDataFromFile(filename) {
-    try {
-        const fs = require('fs').promises;
-        const data = await fs.readFile(filename, 'utf8');
-        return JSON.parse(data);
-    } catch (err) {
-        if (err.code === 'ENOENT') {
-            console.log(`No previous data found in ${filename}`);
-            return null;
-        }
-        console.error(`Error loading data from ${filename}:`, err);
         throw err;
     }
 }
@@ -291,14 +213,9 @@ module.exports = {
     getBPJSData,
     getGWScannerData,
     getFFBWorkerData,
-    saveDataToFile,
-    loadDataFromFile,
-    compareData,
     saveQueryResultsToJson,
-    saveTempData,
-    loadTempData,
     saveQueryHistory,
-    runQueryByType,
     loadAllHistoryData,
-    loadHistoryDataByFileName
+    loadHistoryDataByFileName,
+    compareData
 }; 
