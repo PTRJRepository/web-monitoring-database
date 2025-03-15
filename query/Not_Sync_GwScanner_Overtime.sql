@@ -1,35 +1,31 @@
--- Query untuk menemukan data yang ada di Overtime tapi belum ada di GWScanner
--- Parameter bulan dan tahun otomatis menggunakan bulan dan tahun saat ini
+-- Parameter bulan dan tahun yang bisa diubah
 DECLARE @TargetMonth INT = MONTH(GETDATE()); -- Bulan saat ini
 DECLARE @TargetYear INT = YEAR(GETDATE()); -- Tahun saat ini
-DECLARE @StartDate DATE = DATEFROMPARTS(@TargetYear, @TargetMonth, 1); -- Tanggal awal bulan
-DECLARE @EndDate DATE = EOMONTH(@StartDate); -- Tanggal akhir bulan
+DECLARE @StartDate DATE = DATEFROMPARTS(@TargetYear, @TargetMonth, 1);
+DECLARE @EndDate DATE = EOMONTH(@StartDate);
 
--- Data yang ada di Overtime tapi tidak ada di GWScanner
-SELECT 
-    o.WORKERCODE,
-    o.TRANSDATE,
-    o.TRANSNO,
-    o.FROMOCCODE,
-    o.TOOCCODE,
-    o.TRANSSTATUS,
+-- Data karyawan yang memiliki transaksi di kedua tabel pada tanggal yang sama
+-- dengan filter recordtag di Gwscannerdata
+SELECT
+    g.TRANSSTATUS AS Status_GWScanner,
+    o.TRANSSTATUS AS Status_Overtime,
+    g.WORKERCODE AS EmpCode,
     e.EmpName,
-    emp.PosCode,
-    'Ada di Overtime tapi tidak ada di GWScanner' AS Status
+    CONVERT(DATE, g.TRANSDATE) AS TanggalTransaksi,
+    g.RECORDTAG AS RecordTag_GWScanner,
+    o.RECORDTAG AS RecordTag_Overtime,
+    g.TRANSNO AS TransNo_GWScanner,
+    o.TRANSNO AS TransNo_Overtime,
+    g.FROMOCCODE AS FromCode_GWScanner
 FROM 
-    [staging_PTRJ_iFES_Plantware].[dbo].[Overtime] o
-    LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e ON o.WORKERCODE = e.EmpCode
-    LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYMENT] emp ON o.WORKERCODE = emp.EmpCode
+    [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata] g
+    INNER JOIN [staging_PTRJ_iFES_Plantware].[dbo].[Overtime] o ON 
+        g.WORKERCODE = o.WORKERCODE AND 
+        CONVERT(DATE, g.TRANSDATE) = CONVERT(DATE, o.TRANSDATE)
+    LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e ON g.WORKERCODE = e.EmpCode
 WHERE 
-    o.TRANSDATE BETWEEN @StartDate AND @EndDate
-    AND o.TRANSSTATUS = 'OK'  -- Memastikan hanya data dengan status OK
-    AND NOT EXISTS (
-        SELECT 1 
-        FROM [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata] g
-        WHERE 
-            g.WORKERCODE = o.WORKERCODE
-            AND CONVERT(DATE, g.TRANSDATE) = CONVERT(DATE, o.TRANSDATE)
-    )
+    g.TRANSDATE BETWEEN @StartDate AND @EndDate
+    AND g.RECORDTAG NOT IN ('GJ', 'GV', 'GZ')
 ORDER BY 
-    o.WORKERCODE, 
-    o.TRANSDATE;
+    g.WORKERCODE,
+    g.TRANSDATE;

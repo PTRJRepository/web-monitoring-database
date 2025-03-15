@@ -204,24 +204,25 @@ const GWScannerOvertimeModule = (function() {
         data.forEach(item => {
             const row = document.createElement('tr');
             
-            // Add status class based on status field
-            if (item.Status && item.Status.includes('tidak sinkron')) {
+            // Add status class based on status
+            if (item.Status_GWScanner !== 'OK' || item.Status_Overtime !== 'OK') {
                 row.classList.add('error-row');
-            } else if (item.Status && item.Status.includes('tidak ada')) {
+            } else if (item.RecordTag_GWScanner && !['GJ', 'GV', 'GZ'].includes(item.RecordTag_GWScanner)) {
                 row.classList.add('warning-row');
             }
             
             // Add cells
             row.innerHTML = `
-                <td>${item.Status || ''}</td>
-                <td>${item.WORKERCODE || ''}</td>
+                <td>${item.Status_GWScanner || ''}</td>
+                <td>${item.Status_Overtime || ''}</td>
+                <td>${item.EmpCode || ''}</td>
                 <td>${item.EmpName || ''}</td>
-                <td>${item.PosCode || ''}</td>
-                <td>${formatDate(item.TRANSDATE) || ''}</td>
-                <td>${item.TRANSNO || ''}</td>
-                <td>${item.FROMOCCODE || ''}</td>
-                <td>${item.TOOCCODE || ''}</td>
-                <td>${item.TRANSSTATUS || ''}</td>
+                <td>${formatDate(item.TanggalTransaksi) || ''}</td>
+                <td>${item.RecordTag_GWScanner || ''}</td>
+                <td>${item.RecordTag_Overtime || ''}</td>
+                <td>${item.TransNo_GWScanner || ''}</td>
+                <td>${item.TransNo_Overtime || ''}</td>
+                <td>${item.FromCode_GWScanner || ''}</td>
             `;
             
             tbody.appendChild(row);
@@ -251,8 +252,8 @@ const GWScannerOvertimeModule = (function() {
     function updateStats() {
         // Hitung jumlah data berdasarkan status
         const totalData = data.length;
-        const errorData = data.filter(item => item.Status && item.Status.includes('tidak sinkron')).length;
-        const warningData = data.filter(item => item.Status && item.Status.includes('tidak ada')).length;
+        const errorData = data.filter(item => item.Status_GWScanner !== 'OK' || item.Status_Overtime !== 'OK').length;
+        const warningData = data.filter(item => item.RecordTag_GWScanner && !['GJ', 'GV', 'GZ'].includes(item.RecordTag_GWScanner)).length;
         
         // Update elemen DOM jika ada
         const totalDataEl = document.getElementById('totalGwscannerOvertimeData');

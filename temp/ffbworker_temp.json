@@ -1,39 +1,4 @@
 {
-  "timestamp": "2025-03-14T08:30:17.707Z",
-  "data": [
-    {
-      "ID": "4458610",
-      "TRANSNO": "30654922",
-      "FROMOCCODE": "P1B",
-      "TOOCCODE": "P1B",
-      "WORKERCODE": "B0602",
-      "FIELDNO": "PM2404B2",
-      "LOOSEFRUIT": 1,
-      "RIPE": 35,
-      "UNRIPE": 0,
-      "OVERRIPE": 0,
-      "TRANSDATE": "2025-03-13T10:01:41.000Z",
-      "TRANSSTATUS": "OK          ",
-      "EmployeeStatus": "2 ",
-      "PosCode": "GEN     ",
-      "JumlahKemunculan": 14
-    },
-    {
-      "ID": "4455641",
-      "TRANSNO": "30566146",
-      "FROMOCCODE": "P1B",
-      "TOOCCODE": "P1B",
-      "WORKERCODE": "B0653",
-      "FIELDNO": "PM2405B2",
-      "LOOSEFRUIT": 0,
-      "RIPE": 33,
-      "UNRIPE": 0,
-      "OVERRIPE": 2,
-      "TRANSDATE": "2025-03-12T11:14:49.000Z",
-      "TRANSSTATUS": "OK          ",
-      "EmployeeStatus": "2 ",
-      "PosCode": "GEN     ",
-      "JumlahKemunculan": 12
-    }
-  ]
+  "timestamp": "2025-03-15T05:12:07.427Z",
+  "data": []
 }
