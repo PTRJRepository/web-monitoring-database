@@ -35,7 +35,6 @@ FROM
 INNER JOIN DuplikatTransNoN d ON g.TRANSNO = d.TRANSNO
 WHERE 
     g.TRANSSTATUS = 'OK'
-    AND g.ItechUpdateStatus = 'N'  -- Memastikan hanya yang status N
     AND g.TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0)
     AND g.TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0)
 ORDER BY 
