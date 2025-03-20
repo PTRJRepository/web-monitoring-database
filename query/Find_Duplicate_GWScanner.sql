@@ -7,7 +7,6 @@ WITH DuplikatTransNoN AS (
         TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0) -- Awal bulan ini
         AND TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) -- Awal bulan depan
         AND TRANSSTATUS = 'OK'
-        AND ItechUpdateStatus = 'y'  
     GROUP BY 
         TRANSNO
     HAVING 
