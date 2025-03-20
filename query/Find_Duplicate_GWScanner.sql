@@ -1,4 +1,4 @@
-WITH DuplikatTransNo AS (
+WITH DuplikatTransNoN AS (
     SELECT 
         TRANSNO
     FROM 
@@ -6,11 +6,12 @@ WITH DuplikatTransNo AS (
     WHERE 
         TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0) -- Awal bulan ini
         AND TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) -- Awal bulan depan
-        AND TRANSSTATUS = 'OK'  -- Filter status di CTE
+        AND TRANSSTATUS = 'OK'
+        AND ItechUpdateStatus = 'y'  
     GROUP BY 
         TRANSNO
     HAVING 
-        COUNT(*) > 1  -- Hanya TRANSNO yang muncul lebih dari sekali
+        COUNT(*) > 1  -- Hanya TRANSNO yang muncul lebih dari sekali dengan status N
 )
 SELECT 
     g.ID,
@@ -32,11 +33,12 @@ SELECT
     g.ItechUpdateStatus
 FROM 
     [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata] g
-INNER JOIN DuplikatTransNo d ON g.TRANSNO = d.TRANSNO
+INNER JOIN DuplikatTransNoN d ON g.TRANSNO = d.TRANSNO
 WHERE 
-    g.TRANSSTATUS = 'OK'  -- Filter status di query utama
-    AND g.TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0) -- Awal bulan ini
-    AND g.TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) -- Awal bulan depan
+    g.TRANSSTATUS = 'OK'
+    AND g.ItechUpdateStatus = 'N'  -- Memastikan hanya yang status N
+    AND g.TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0)
+    AND g.TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0)
 ORDER BY 
-    g.TRANSNO,  -- Mengelompokkan berdasarkan TRANSNO
-    g.ID        -- Mengurutkan berdasarkan ID dalam setiap kelompok
+    g.TRANSNO,
+    g.ID
