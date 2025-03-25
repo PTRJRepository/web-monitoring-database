@@ -1,15 +1,134 @@
-const { executeQuery } = require('./dbConnection');
+const fs = require('fs');
+const path = require('path');
+const moment = require('moment');
+const { executeQuery, getQueryFromFile } = require('./dbConnection');
 const { 
     TUNJANGAN_BERAS_QUERY, 
     BPJS_QUERY, 
-    GWSCANNER_QUERY, 
-    FFBWORKER_QUERY 
-} = require('./sqlQueries');
+    DUPLICATE_GWSCANNER_QUERY, 
+    FFBWORKER_QUERY,
+    NOT_SYNC_GWSCANNER_OVERTIME_QUERY
+} = require('./index');
+
+// Path untuk file data
+const dataDir = path.join(__dirname, '../public/data');
+const historyDir = path.join(__dirname, '../history');
+
+// Pastikan direktori ada
+[dataDir, historyDir].forEach(dir => {
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+    }
+});
+
+// Fungsi untuk menyimpan hasil query ke file JSON untuk tampilan
+function saveQueryResultsToJson(dataType, data) {
+    try {
+        const filePath = path.join(dataDir, `${dataType}_results.json`);
+        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        console.log(`Saved query results to ${filePath} for display`);
+    } catch (err) {
+        console.error(`Error saving ${dataType} results to JSON:`, err);
+    }
+}
+
+// Fungsi untuk menyimpan data ke history
+function saveQueryHistory(dataType, data) {
+    try {
+        const timestamp = moment().format('YYYY-MM-DD_HH-mm-ss');
+        const filePath = path.join(historyDir, `${dataType}_${timestamp}.json`);
+        const historyData = {
+            timestamp: new Date().toISOString(),
+            dataType: dataType,
+            recordCount: data.length,
+            data: data
+        };
+        fs.writeFileSync(filePath, JSON.stringify(historyData, null, 2));
+        console.log(`Saved query history to ${filePath}`);
+        return filePath;
+    } catch (err) {
+        console.error(`Error saving ${dataType} history:`, err);
+        return null;
+    }
+}
+
+// Fungsi untuk memuat semua data history
+function loadAllHistoryData() {
+    try {
+        const historyData = {
+            tunjangan_beras: [],
+            bpjs: [],
+            gwscanner: [],
+            ffbworker: [],
+            gwscanner_overtime_not_sync: []
+        };
+        
+        if (fs.existsSync(historyDir)) {
+            const files = fs.readdirSync(historyDir);
+            
+            files.forEach(file => {
+                if (file.endsWith('.json')) {
+                    try {
+                        const filePath = path.join(historyDir, file);
+                        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+                        
+                        // Ekstrak jenis data dari nama file
+                        const dataType = file.split('_')[0];
+                        
+                        if (historyData[dataType]) {
+                            historyData[dataType].push({
+                                timestamp: data.timestamp,
+                                recordCount: data.recordCount,
+                                filePath: filePath,
+                                fileName: file
+                            });
+                        }
+                    } catch (fileErr) {
+                        console.error(`Error processing history file ${file}:`, fileErr);
+                    }
+                }
+            });
+            
+            // Urutkan data berdasarkan timestamp (terbaru dulu)
+            Object.keys(historyData).forEach(key => {
+                historyData[key].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            });
+        }
+        
+        return historyData;
+    } catch (err) {
+        console.error('Error loading history data:', err);
+        return {};
+    }
+}
+
+// Fungsi untuk memuat data history berdasarkan nama file
+function loadHistoryDataByFileName(fileName) {
+    try {
+        const filePath = path.join(historyDir, fileName);
+        if (fs.existsSync(filePath)) {
+            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            return data;
+        }
+        return null;
+    } catch (err) {
+        console.error(`Error loading history data from ${fileName}:`, err);
+        return null;
+    }
+}
 
 // Fungsi untuk mendapatkan data tunjangan beras
 async function getTunjanganBerasData() {
     try {
+        // Menggunakan query dari file SQL
         const data = await executeQuery(TUNJANGAN_BERAS_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('tunjangan_beras', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('tunjangan_beras', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting tunjangan beras data:', err);
@@ -21,6 +140,13 @@ async function getTunjanganBerasData() {
 async function getBPJSData() {
     try {
         const data = await executeQuery(BPJS_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('bpjs', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('bpjs', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting BPJS data:', err);
@@ -31,7 +157,14 @@ async function getBPJSData() {
 // Fungsi untuk mendapatkan data GWScanner
 async function getGWScannerData() {
     try {
-        const data = await executeQuery(GWSCANNER_QUERY);
+        const data = await executeQuery(DUPLICATE_GWSCANNER_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('gwscanner', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('gwscanner', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting GWScanner data:', err);
@@ -43,37 +176,16 @@ async function getGWScannerData() {
 async function getFFBWorkerData() {
     try {
         const data = await executeQuery(FFBWORKER_QUERY);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('ffbworker', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('ffbworker', data);
+        
         return data;
     } catch (err) {
         console.error('Error getting FFB Worker data:', err);
-        throw err;
-    }
-}
-
-// Fungsi untuk menyimpan data ke file JSON
-async function saveDataToFile(data, filename) {
-    try {
-        const fs = require('fs').promises;
-        await fs.writeFile(filename, JSON.stringify(data, null, 2));
-        console.log(`Data saved to ${filename}`);
-    } catch (err) {
-        console.error(`Error saving data to ${filename}:`, err);
-        throw err;
-    }
-}
-
-// Fungsi untuk membaca data dari file JSON
-async function loadDataFromFile(filename) {
-    try {
-        const fs = require('fs').promises;
-        const data = await fs.readFile(filename, 'utf8');
-        return JSON.parse(data);
-    } catch (err) {
-        if (err.code === 'ENOENT') {
-            console.log(`No previous data found in ${filename}`);
-            return null;
-        }
-        console.error(`Error loading data from ${filename}:`, err);
         throw err;
     }
 }
@@ -98,12 +210,35 @@ function compareData(newData, oldData) {
     return { added, removed, changed };
 }
 
+// Fungsi untuk mendapatkan data yang tidak sinkron antara GWScanner dan Overtime
+async function getNotSyncGWScannerOvertimeData() {
+    try {
+        console.log('Executing GWScanner-Overtime not sync query...');
+        const data = await executeQuery(NOT_SYNC_GWSCANNER_OVERTIME_QUERY);
+        console.log(`GWScanner-Overtime not sync query completed. Found ${data.length} records.`);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('gwscanner_overtime_not_sync', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('gwscanner_overtime_not_sync', data);
+        
+        return data;
+    } catch (err) {
+        console.error('Error getting GWScanner-Overtime not sync data:', err);
+        throw err;
+    }
+}
+
 module.exports = {
     getTunjanganBerasData,
     getBPJSData,
     getGWScannerData,
     getFFBWorkerData,
-    saveDataToFile,
-    loadDataFromFile,
+    getNotSyncGWScannerOvertimeData,
+    saveQueryResultsToJson,
+    saveQueryHistory,
+    loadAllHistoryData,
+    loadHistoryDataByFileName,
     compareData
 }; 

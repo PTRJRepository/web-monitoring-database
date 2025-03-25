@@ -4,23 +4,23 @@
 function updateTimelineChart(historyData) {
     // Ambil range waktu yang dipilih
     const timeRange = $('#historyTimeRange').val();
-    
+
     // Filter data berdasarkan range waktu
     let filteredData = {};
     const now = new Date();
     const timeRangeHours = timeRange === 'all' ? Number.MAX_SAFE_INTEGER : parseInt(timeRange);
-    
+
     // Proses data untuk setiap jenis query
     for (let queryType in historyData) {
         filteredData[queryType] = historyData[queryType].filter(entry => {
             if (timeRange === 'all') return true;
-            
+
             const entryDate = new Date(entry.timestamp);
             const hoursDiff = (now - entryDate) / (1000 * 60 * 60);
             return hoursDiff <= timeRangeHours;
         });
     }
-    
+
     // Siapkan data untuk chart
     const datasets = [];
     const colors = {
@@ -41,23 +41,23 @@ function updateTimelineChart(historyData) {
             backgroundColor: 'rgba(102, 187, 106, 0.1)'
         }
     };
-    
+
     const labels = {
         'tunjangan_beras': 'Tunjangan Beras',
         'bpjs': 'BPJS Belum Lengkap',
         'gwscanner': 'Duplikat GWScanner',
         'ffbworker': 'Non-Pemanen dengan Ripe'
     };
-    
+
     // Buat dataset untuk setiap jenis query
     for (let queryType in filteredData) {
         if (filteredData[queryType].length === 0) continue;
-        
+
         const data = filteredData[queryType].map(entry => ({
             x: new Date(entry.timestamp),
             y: entry.recordCount
         })).sort((a, b) => a.x - b.x);
-        
+
         datasets.push({
             label: labels[queryType] || queryType,
             data: data,
@@ -69,7 +69,7 @@ function updateTimelineChart(historyData) {
             tension: 0.2
         });
     }
-    
+
     // Hancurkan grafik yang ada jika sudah ada
     try {
         if (window.timelineChart && typeof window.timelineChart.destroy === 'function') {
@@ -81,13 +81,13 @@ function updateTimelineChart(historyData) {
         $('#timelineChart').remove();
         $('.timeline-chart-container').append('<canvas id="timelineChart"></canvas>');
     }
-    
+
     // Pastikan Chart.js sudah dimuat
     if (typeof Chart === 'undefined') {
         console.error('Chart.js belum dimuat');
         return;
     }
-    
+
     // Buat grafik baru
     try {
         const canvas = document.getElementById('timelineChart');
@@ -95,7 +95,7 @@ function updateTimelineChart(historyData) {
             console.error('Elemen canvas #timelineChart tidak ditemukan');
             return;
         }
-        
+
         const ctx = canvas.getContext('2d');
         window.timelineChart = new Chart(ctx, {
             type: 'line',
@@ -111,9 +111,9 @@ function updateTimelineChart(historyData) {
                             unit: timeRange === '24' ? 'hour' : 'day',
                             displayFormats: {
                                 hour: 'HH:mm',
-                                day: 'DD/MM'
+                                day: 'dd/MM'
                             },
-                            tooltipFormat: 'DD/MM/YYYY HH:mm'
+                            tooltipFormat: 'dd/MM/yyyy HH:mm'
                         },
                         title: {
                             display: true,
@@ -153,28 +153,28 @@ async function loadHistoryDataAndUpdateTimeline() {
         if (typeof showLoading === 'function') {
             showLoading('Memuat data history...');
         }
-        
+
         const response = await fetch('/api/history-data');
-        
+
         if (!response.ok) {
             throw new Error(`Server error: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
             // Simpan data history ke variabel global untuk digunakan di seluruh aplikasi
             window.historyData = result.history;
-            
+
             try {
                 // Update grafik timeline
                 updateTimelineChart(result.history);
-                
+
                 // Periksa perubahan data dan tampilkan notifikasi jika ada perubahan
                 if (typeof checkDataChangesAndNotify === 'function') {
                     checkDataChangesAndNotify(result.history);
                 }
-                
+
                 if (typeof showToast === 'function') {
                     showToast('Sukses', 'Data history berhasil dimuat', 'success');
                 }
@@ -187,7 +187,7 @@ async function loadHistoryDataAndUpdateTimeline() {
         } else {
             throw new Error(result.error || 'Gagal memuat data history');
         }
-        
+
         if (typeof hideLoading === 'function') {
             hideLoading();
         }
@@ -199,7 +199,7 @@ async function loadHistoryDataAndUpdateTimeline() {
         if (typeof hideLoading === 'function') {
             hideLoading();
         }
-        
+
         // Coba buat container untuk chart jika belum ada
         if (!document.getElementById('timelineChart')) {
             $('.timeline-chart-container').html('<canvas id="timelineChart"></canvas>');
@@ -209,4 +209,4 @@ async function loadHistoryDataAndUpdateTimeline() {
 
 // Ekspor fungsi ke window
 window.updateTimelineChart = updateTimelineChart;
-window.loadHistoryDataAndUpdateTimeline = loadHistoryDataAndUpdateTimeline; 
+window.loadHistoryDataAndUpdateTimeline = loadHistoryDataAndUpdateTimeline;

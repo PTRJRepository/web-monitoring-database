@@ -70,6 +70,13 @@ MainQuery AS (
             WHEN 1 THEN 'Single'
             ELSE 'Cerai'
         END AS Status_Pernikahan,
+        CASE e.Status
+            WHEN 1 THEN 'Aktif'
+            WHEN 2 THEN 'Tidak Aktif'
+            ELSE 'Status Lain'
+        END AS Status_Karyawan,
+        emp.SalGradeCode,
+        p.RiceRationCode,
         COUNT(*) AS JmlKeluarga,
         MAX(CASE WHEN f.AdjustedRN = 1 THEN f.NamaLengkap END) AS Keluarga1,
         MAX(CASE WHEN f.AdjustedRN = 1 THEN f.Usia END) AS Usia1,
@@ -261,10 +268,12 @@ MainQuery AS (
         [db_ptrj].[dbo].[HR_EMPLOYEE] e ON f.EmpCode = e.EmpCode
     LEFT JOIN 
         [db_ptrj].[dbo].[HR_PAYROLL] p ON f.EmpCode = p.EmpCode
+    LEFT JOIN
+        [db_ptrj].[dbo].[HR_EMPLOYMENT] emp ON f.EmpCode = emp.EmpCode
     WHERE
         e.Status = 1  -- Hanya karyawan aktif
     GROUP BY 
-        f.EmpCode, e.EmpName, e.Gender, e.MaritalStatus, p.PayRate, p.RiceRation
+        f.EmpCode, e.EmpName, e.Gender, e.MaritalStatus, e.Status, emp.SalGradeCode, p.RiceRationCode, p.PayRate, p.RiceRation
 )
 -- Query luar untuk menampilkan data dengan validasi salah atau selisih tunjangan
 SELECT *
@@ -273,4 +282,11 @@ WHERE
     ((Status_Validasi1 = 'Salah' OR Status_Validasi2 = 'Salah' OR Status_Validasi3 = 'Salah' OR Status_Validasi4 = 'Salah' OR Status_Validasi5 = 'Salah')
     OR (Perbandingan_RiceRation = 'Beda' AND Selisih_RiceRation > 0))
     AND RiceRation_Aktual < 7000
+    AND EXISTS (
+        SELECT 1 
+        FROM [db_ptrj].[dbo].[HR_EMPLOYMENT] emp 
+        WHERE emp.EmpCode = MainQuery.EmpCode 
+        AND emp.SalGradeCode = 'SKUH'
+    )
+    AND (RiceRationCode IS NULL OR RiceRationCode <> 'BERASBHL')
 ORDER BY EmpCode;

@@ -1,0 +1,26 @@
+{
+  "isEnabled": true,
+  "sender": {
+    "email": "atharizki.developer@gmail.com",
+    "password": "windows0189"
+  },
+  "interval": {
+    "checkData": 5,
+    "sendEmail": 180
+  },
+  "recipients": {
+    "firstTime": "atharizki001@gmail.com",
+    "interval": "atharizki001@gmail.com",
+    "tunjangan_beras": "",
+    "bpjs": "",
+    "gwscanner": "",
+    "ffbworker": ""
+  },
+  "cc": [],
+  "templates": {
+    "tunjangan_beras": "Ditemukan ketidaksesuaian pada data tunjangan beras karyawan. Mohon untuk segera ditindaklanjuti.",
+    "bpjs": "Ditemukan data BPJS yang belum lengkap. Mohon untuk segera ditindaklanjuti.",
+    "gwscanner": "Ditemukan data duplikat pada GWScanner. Mohon untuk segera ditindaklanjuti.",
+    "ffbworker": "Ditemukan data pekerja dengan posisi bukan pemanen (non-HAR) yang memiliki data Ripe. Mohon untuk segera diverifikasi."
+  }
+}

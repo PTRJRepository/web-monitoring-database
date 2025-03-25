@@ -1,4 +1,14 @@
-const TUNJANGAN_BERAS_QUERY = `
+const fs = require('fs');
+const path = require('path');
+
+// Membaca file SQL
+const TUNJANGAN_BERAS_QUERY = fs.readFileSync(
+    path.join(__dirname, 'Incorrect_Input_Jatah_Beras_Filter.sql'),
+    'utf8'
+);
+
+// Query lama yang ada di file ini
+const TUNJANGAN_BERAS_QUERY_ORIGINAL = `
 DECLARE @CurrentYear INT = YEAR(GETDATE());
 
 WITH FamilyCTE AS (
@@ -103,5 +113,6 @@ HAVING
 `;
 
 module.exports = {
-    TUNJANGAN_BERAS_QUERY
+    TUNJANGAN_BERAS_QUERY,
+    TUNJANGAN_BERAS_QUERY_ORIGINAL
 }; 

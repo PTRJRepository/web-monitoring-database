@@ -42,7 +42,8 @@ WorkerData AS (
     INNER JOIN 
         EmployeePositions e ON f.WORKERCODE = e.EmpCode
     WHERE 
-        f.TRANSDATE >= '2025-02-01' AND f.TRANSDATE < '2025-03-01'
+        f.TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0) -- Awal bulan ini
+        AND f.TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) -- Awal bulan depan
         AND f.TRANSSTATUS = 'OK'
         AND f.RIPE > 0
         AND e.PosCode != 'HAR'
