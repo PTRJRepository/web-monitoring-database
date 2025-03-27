@@ -1,4 +1,65 @@
 {
-  "timestamp": "2025-03-20T01:22:27.197Z",
-  "data": []
+  "timestamp": "2025-03-27T08:56:54.723Z",
+  "data": [
+    {
+      "Status_GWScanner": "OK",
+      "Status_Overtime": "OK          ",
+      "EmpCode": "C0026",
+      "EmpName": "WIDODO JOKO PURWANTO ( MARYATI )                                ",
+      "TanggalTransaksi": "2025-03-23T00:00:00.000Z",
+      "RecordTag_GWScanner": "WDR",
+      "RecordTag_Overtime": "GT",
+      "TransNo_GWScanner": "2503251057341115",
+      "TransNo_Overtime": "50305069",
+      "FromCode_GWScanner": "P2A"
+    },
+    {
+      "Status_GWScanner": "OK",
+      "Status_Overtime": "OK          ",
+      "EmpCode": "C0032",
+      "EmpName": "RIDHO APRIZAL (  ARYATI )                                       ",
+      "TanggalTransaksi": "2025-03-23T00:00:00.000Z",
+      "RecordTag_GWScanner": "WDR",
+      "RecordTag_Overtime": "GT",
+      "TransNo_GWScanner": "2503251058508124",
+      "TransNo_Overtime": "50305070",
+      "FromCode_GWScanner": "P2A"
+    },
+    {
+      "Status_GWScanner": "OK",
+      "Status_Overtime": "OK          ",
+      "EmpCode": "C0510",
+      "EmpName": "ANDI ( Paria )                                                  ",
+      "TanggalTransaksi": "2025-03-23T00:00:00.000Z",
+      "RecordTag_GWScanner": "WDR",
+      "RecordTag_Overtime": "GT",
+      "TransNo_GWScanner": "2503251146405813",
+      "TransNo_Overtime": "50305066",
+      "FromCode_GWScanner": "P2A"
+    },
+    {
+      "Status_GWScanner": "OK",
+      "Status_Overtime": "OK          ",
+      "EmpCode": "C0526",
+      "EmpName": "DICKY PRATAMA (Devi Gustiyanti)                                 ",
+      "TanggalTransaksi": "2025-03-23T00:00:00.000Z",
+      "RecordTag_GWScanner": "WDR",
+      "RecordTag_Overtime": "GT",
+      "TransNo_GWScanner": "2503251147582194",
+      "TransNo_Overtime": "50305068",
+      "FromCode_GWScanner": "P2A"
+    },
+    {
+      "Status_GWScanner": "OK",
+      "Status_Overtime": "OK          ",
+      "EmpCode": "C0603",
+      "EmpName": "QISTAHAM (Inaq Kiaman)                                          ",
+      "TanggalTransaksi": "2025-03-23T00:00:00.000Z",
+      "RecordTag_GWScanner": "WDR",
+      "RecordTag_Overtime": "GT",
+      "TransNo_GWScanner": "2503251154227234",
+      "TransNo_Overtime": "50305067",
+      "FromCode_GWScanner": "P2A"
+    }
+  ]
 }

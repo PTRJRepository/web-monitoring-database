@@ -1727,5 +1727,20 @@ app.post('/api/config', (req, res) => {
     }
 });
 
+// Tambahkan route untuk mengakses file-file di folder temp
+app.get('/temp/:filename', (req, res) => {
+  const filename = req.params.filename;
+  const filePath = path.join(__dirname, 'temp', filename);
+  
+  console.log(`Akses ke file temp: ${filename}`);
+  
+  // Periksa apakah file ada
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(404).json({ error: `File ${filename} tidak ditemukan` });
+  }
+});
+
 // Panggil fungsi startServer
 startServer();

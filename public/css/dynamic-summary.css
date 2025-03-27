@@ -1,0 +1,95 @@
+/**
+ * dynamic-summary.css
+ * Styles for the dynamic summary card
+ */
+
+#dynamic-summary-card {
+    margin-bottom: 2rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.5rem;
+}
+
+#dynamic-summary-title {
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+#dynamic-summary-stats {
+    margin-top: 1.5rem;
+}
+
+.summary-stat {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.05);
+    margin-bottom: 1rem;
+    transition: transform 0.2s ease-in-out;
+}
+
+.summary-stat:hover {
+    transform: translateY(-3px);
+}
+
+.summary-stat i {
+    font-size: 2rem;
+    margin-right: 1rem;
+}
+
+.summary-stat h5 {
+    font-size: 0.9rem;
+    margin-bottom: 0.25rem;
+    color: #6c757d;
+}
+
+.summary-stat p {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 0;
+    color: #2c3e50;
+}
+
+.summary-stat .text-info {
+    color: #17a2b8;
+}
+
+.summary-stat .text-warning {
+    color: #ffc107;
+}
+
+.summary-stat .text-danger {
+    color: #dc3545;
+}
+
+.summary-stat .text-success {
+    color: #28a745;
+}
+
+#dynamic-chart-bar,
+#dynamic-chart-pie {
+    border-color: #dee2e6;
+    color: #6c757d;
+}
+
+#dynamic-chart-bar.active,
+#dynamic-chart-pie.active {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .summary-stat {
+        padding: 0.75rem;
+    }
+    
+    .summary-stat i {
+        font-size: 1.5rem;
+    }
+    
+    .summary-stat p {
+        font-size: 1.2rem;
+    }
+} 
