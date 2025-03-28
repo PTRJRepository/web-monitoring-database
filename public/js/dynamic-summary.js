@@ -67,6 +67,16 @@ document.addEventListener('DOMContentLoaded', function() {
             icon: 'fas fa-sync-alt',
             chartTitle: 'Jumlah Berdasarkan Status',
             filename: 'gwscanner_overtime_not_sync_temp.json'
+        },
+        {
+            id: 'gwscanner-taskreg-tab',
+            targetId: 'gwscanner-taskreg-data',
+            title: 'Ringkasan Data Checkroll Not Sync GWScanner Taskreg',
+            statsCardId: 'gwscanner-taskreg-stats',
+            fieldForChart: 'WORKERCODE',
+            icon: 'fas fa-clipboard-check',
+            chartTitle: 'Jumlah Berdasarkan Status',
+            filename: 'gwscanner_taskreg_temp.json'
         }
     ];
     
@@ -189,15 +199,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 return 'rgba(75, 192, 192, 0.6)'; // Teal
             case 'gwscanner-overtime-tab':
                 return 'rgba(153, 102, 255, 0.6)'; // Ungu
+            case 'gwscanner-taskreg-tab':
+                return 'rgba(102, 192, 102, 0.6)'; // Hijau
             default:
                 return 'rgba(128, 128, 128, 0.6)'; // Abu-abu
         }
     }
     
+    // Function untuk membuat card statistik
+    function createStatCard(title, value, icon, colorClass) {
+        return `
+            <div class="col-md-4 col-sm-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body d-flex">
+                        <div class="flex-shrink-0 me-3 rounded-circle bg-${colorClass} bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                            <i class="${icon} text-${colorClass} fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="card-subtitle mb-1 text-muted">${title}</h6>
+                            <h3 class="card-title mb-0">${value}</h3>
+                            ${value === 0 ? '<small class="text-muted">Tidak ada data</small>' : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
     // Function untuk mengupdate stats
     function updateStats(data, tabInfo) {
-        let statsHTML = '';
-        
         // Ambil jumlah total data dari tiap kategori
         const countData = {};
         
@@ -213,49 +243,44 @@ document.addEventListener('DOMContentLoaded', function() {
             duplicateCount = countDuplicatesInGWScanner(window.loadedData['gwscanner_temp.json']);
         }
         
-        // Total data secara keseluruhan
-        const totalAllData = Object.values(countData).reduce((sum, count) => sum + count, 0);
+        // Define cards data structure
+        const cardsData = [
+            {
+                title: 'Tunjangan Beras',
+                value: countData['tunjangan_beras_temp.json'],
+                icon: 'fas fa-money-bill-wave',
+                colorClass: 'success'
+            },
+            {
+                title: 'BPJS',
+                value: countData['bpjs_temp.json'],
+                icon: 'fas fa-heartbeat',
+                colorClass: 'primary'
+            },
+            {
+                title: 'GWScanner Duplikat',
+                value: duplicateCount,
+                icon: 'fas fa-qrcode',
+                colorClass: 'warning'
+            },
+            {
+                title: 'GWScanner-Overtime',
+                value: countData['gwscanner_overtime_not_sync_temp.json'],
+                icon: 'fas fa-sync-alt',
+                colorClass: 'secondary'
+            },
+            {
+                title: 'Checkroll Not Sync',
+                value: countData['gwscanner_taskreg_temp.json'],
+                icon: 'fas fa-clipboard-check',
+                colorClass: 'success'
+            }
+        ];
         
-        statsHTML = `
-            <div class="col-md-3">
-                <div class="summary-stat">
-                    <i class="fas fa-database text-info"></i>
-                    <div>
-                        <h5>Total Semua Data</h5>
-                        <p>${totalAllData}</p>
-                        ${totalAllData === 0 ? '<small class="text-muted">Tidak ada data yang tersedia</small>' : ''}
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="summary-stat">
-                    <i class="fas fa-money-bill-wave text-success"></i>
-                    <div>
-                        <h5>Tunjangan Beras</h5>
-                        <p>${countData['tunjangan_beras_temp.json']}</p>
-                        ${countData['tunjangan_beras_temp.json'] === 0 ? '<small class="text-muted">Tidak ada data</small>' : ''}
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="summary-stat">
-                    <i class="fas fa-heartbeat text-primary"></i>
-                    <div>
-                        <h5>BPJS</h5>
-                        <p>${countData['bpjs_temp.json']}</p>
-                        ${countData['bpjs_temp.json'] === 0 ? '<small class="text-muted">Tidak ada data</small>' : ''}
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="summary-stat">
-                    <i class="fas fa-qrcode text-warning"></i>
-                    <div>
-                        <h5>GWScanner Duplikat</h5>
-                        <p>${duplicateCount}</p>
-                        ${window.loadedData && window.loadedData['gwscanner_temp.json'] && window.loadedData['gwscanner_temp.json'].length === 0 ? '<small class="text-muted">Tidak ada data</small>' : ''}
-                    </div>
-                </div>
+        // Generate HTML for all cards
+        const statsHTML = `
+            <div class="row g-3">
+                ${cardsData.map(card => createStatCard(card.title, card.value, card.icon, card.colorClass)).join('')}
             </div>
         `;
         
@@ -406,7 +431,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     'bpjs_temp.json',
                     'gwscanner_temp.json',
                     'ffbworker_temp.json',
-                    'gwscanner_overtime_not_sync_temp.json'
+                    'gwscanner_overtime_not_sync_temp.json',
+                    'gwscanner_taskreg_temp.json'
                 ];
                 
                 // Inisialisasi atau gunakan loadedData yang ada
