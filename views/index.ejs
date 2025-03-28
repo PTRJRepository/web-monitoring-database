@@ -555,826 +555,42 @@
         .dataTables_wrapper .dataTables_info {
             padding-top: 1rem;
         }
-        .dataTables_wrapper .dataTables_paginate {
-            padding-top: 1rem;
-        }
-        .dataTables_wrapper .dt-buttons {
-            margin-bottom: 1rem;
-        }
         
-        .dt-buttons .btn {
-            margin-right: 0.5rem;
-        }
+        /* Semua CSS terkait pagination telah dihapus */
         
-        .dt-button-collection {
-            padding: 0.5rem;
-        }
-        
-        .dt-button-collection .dt-button {
-            display: block;
-            margin: 0.25rem 0;
-            padding: 0.375rem 0.75rem;
-            width: 100%;
-            text-align: left;
-        }
-        
-        .buttons-collection {
-            margin-right: 0.5rem;
-        }
-
-        .sidebar {
-            background: #2c3e50;
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 250px;
-            transition: all 0.3s;
-            padding-top: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            z-index: 999;
-        }
-
-        .content {
-            margin-left: 250px;
-            padding: 20px;
-            transition: all 0.3s;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                margin-left: -250px;
-            }
-            .content {
-                margin-left: 0;
-            }
-            .sidebar.active {
-                margin-left: 0;
-            }
-            .content.active {
-                margin-left: 250px;
-            }
-        }
-
-        .sidebar-header {
-            padding: 15px;
-            background: #1a2530;
-            color: white;
-        }
-
-        .navbar {
-            background-color: #fff;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        }
-
-        .tab-content {
-            background-color: #fff;
-            border-radius: 0 0 8px 8px;
-            padding: 20px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-
-        .nav-tabs .nav-link {
-            border: none;
-            border-radius: 0;
-            padding: 12px 20px;
-            font-weight: 500;
-            color: #6c757d;
-            transition: all 0.2s;
-        }
-
-        .nav-tabs .nav-link:hover {
-            background-color: rgba(0, 123, 255, 0.1);
-            color: #495057;
-        }
-
-        .nav-tabs .nav-link.active {
-            color: #007bff;
-            background-color: #fff;
-            border-top: 3px solid #007bff;
-            font-weight: 600;
-        }
-
-        .card {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-            border: none;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        .card-header {
+        /* Style untuk navigasi halaman kustom */
+        .custom-pagination {
             background-color: #f8f9fa;
-            border-bottom: 1px solid #eaeaea;
-            padding: 15px 20px;
-            font-weight: 600;
+            padding: 10px 15px;
+            border-radius: 5px;
+            border: 1px solid #e3e6f0;
+            margin: 15px 0;
         }
-
-        .table-responsive {
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .dataTables_wrapper {
-            padding: 0;
-        }
-
-        .filter-container {
-            margin-bottom: 20px;
-        }
-
-        .filter-bubble {
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .filter-bubble:hover {
-            transform: scale(1.05);
-        }
-
-        .filter-bubble.active {
-            background-color: #e0e0e0 !important;
-            color: #333 !important;
-        }
-
-        .config-section {
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-
-        /* Timeline chart */
-        .timeline-chart {
-            height: 300px;
-            margin-bottom: 20px;
-        }
-
-        /* Status Indikator */
-        .indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            margin-right: 5px;
-        }
-
-        .indicator-success {
-            background-color: #28a745;
-        }
-
-        .indicator-warning {
-            background-color: #ffc107;
-        }
-
-        .indicator-danger {
-            background-color: #dc3545;
-        }
-
-        table thead th {
-            background-color: #f8f9fc;
+        
+        .custom-pagination .page-info {
+            font-size: 14px;
             color: #5a5c69;
-            font-weight: 600;
-            border-bottom: 2px solid #e3e6f0;
         }
         
-        /* Data container dan table styles */
-        .data-container {
-            padding: 1rem;
-            margin-top: 1rem;
+        .custom-pagination .btn {
+            padding: 5px 10px;
+            font-size: 13px;
         }
         
-        /* Filter bubble styles */
-        .filter-bubble {
-            display: inline-block;
-            padding: 0.3rem 0.8rem;
-            margin: 0 0.3rem 0.5rem 0;
-            border-radius: 20px;
-            background-color: #e9ecef;
-            color: #495057;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid transparent;
+        .custom-pagination .btn i {
+            margin: 0 2px;
         }
         
-        .filter-bubble:hover {
-            background-color: #dee2e6;
-            transform: translateY(-2px);
+        /* Style untuk kotak pencarian kustom */
+        .search-container {
+            margin-bottom: 15px;
         }
         
-        .filter-bubble.active {
-            background-color: #4e73df;
-            color: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        }
-
-        /* Dynamic summary dan chart styles */
-        #dynamic-summary-card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-            transition: all 0.3s ease;
+        .search-container .input-group {
+            max-width: 350px;
         }
         
-        #dynamic-summary-card:hover {
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
-            transform: translateY(-3px);
-        }
-        
-        #dynamic-summary-card .card-header {
-            background-color: #f8f9fc;
-            border-bottom: 1px solid #e3e6f0;
-            padding: 15px 20px;
-        }
-        
-        #dynamic-summary-card .card-body {
-            padding: 20px;
-            height: auto !important;
-            min-height: auto !important;
-        }
-        
-        #dynamic-summary-title {
-            margin: 0;
-            font-weight: 600;
-            color: #4e73df;
-        }
-        
-        #dynamic-summary-chart {
-            height: 250px !important;
-            max-height: 250px !important;
-            min-height: 250px !important;
-            width: 100% !important;
-        }
-        
-        #dynamic-chart-bar,
-        #dynamic-chart-pie {
-            transition: all 0.2s ease;
-        }
-        
-        #dynamic-chart-bar:hover,
-        #dynamic-chart-pie:hover {
-            transform: translateY(-2px);
-        }
-        
-        #dynamic-chart-bar.active,
-        #dynamic-chart-pie.active {
-            background-color: #4e73df;
-            color: white;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        /* Fixed header styling for DataTables */
-        .table-responsive {
-            position: relative;
-            overflow-x: auto !important; 
-            overflow-y: auto !important;
-            max-width: 100%;
-        }
-        
-        table.dataTable thead th {
-            position: sticky !important;
-            top: 0;
-            z-index: 10;
-            background-color: #f8f9fa;
-        }
-        
-        .dataTables_wrapper .table-responsive {
-            overflow: visible !important;
-        }
-        
-        .dataTables_scrollBody {
-            overflow-x: auto !important;
-            overflow-y: auto !important;
-        }
-        
-        /* Fix for horizontal scrolling with fixed headers */
-        .dataTables_scrollHead {
-            overflow: visible !important;
-        }
-        
-        .dataTables_scrollHeadInner {
-            width: 100% !important;
-        }
-        
-        .dataTables_scrollHeadInner table {
-            width: 100% !important;
-        }
-        
-        table.dataTable {
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-            width: 100% !important;
-        }
-        
-        /* Additional fixes for sticky header when scrolling horizontally */
-        .table th {
-            position: -webkit-sticky; /* For Safari */
-            position: sticky;
-            top: 0;
-            z-index: 2;
-            background-color: #f8f9fa;
-        }
-        
-        .dataTables_wrapper .dataTables_scroll div.dataTables_scrollBody {
-            overflow-x: auto !important;
-            overflow-y: auto !important;
-        }
-        
-        /* Custom styles for the table container */
-        .dataTables_wrapper {
-            width: 100%;
-            overflow: hidden;
-        }
-        
-        /* Make sure horizontal scrollbar appears when needed */
-        .dataTables_scrollBody {
-            min-height: 200px;
-            max-height: 60vh;
-            width: 100%;
-            overflow-x: auto !important;
-        }
-        
-        @media (max-width: 992px) {
-            .table-responsive {
-                overflow-x: scroll !important;
-                -webkit-overflow-scrolling: touch;
-            }
-        }
-
-        /* Table header styling */
-        .table thead th {
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            font-weight: 600;
-            color: #444;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-        
-        /* Fixed header styling for DataTables */
-        .table-responsive {
-            position: relative;
-            overflow-x: auto !important; 
-            overflow-y: auto !important;
-            max-width: 100%;
-        }
-        
-        /* Ensure DataTables header scrolls with content horizontally */
-        .dataTables_scrollHead {
-            overflow: visible !important;
-            position: relative !important;
-        }
-        
-        .dataTables_scrollHead .dataTables_scrollHeadInner {
-            position: relative !important;
-            width: 100% !important;
-        }
-        
-        .dataTables_scrollHead .dataTables_scrollHeadInner table {
-            width: 100% !important;
-            margin: 0 !important;
-        }
-        
-        /* Fixed header styles */
-        table.dataTable.fixedHeader-floating,
-        table.dataTable.fixedHeader-locked {
-            background-color: white;
-            margin-top: 0 !important;
-            margin-bottom: 0 !important;
-        }
-        
-        /* Ensure table fills container */
-        .dataTables_wrapper .dataTable {
-            width: 100% !important;
-            margin: 0 !important;
-        }
-        
-        /* Ensure scrollbody scrolls properly */
-        .dataTables_wrapper .dataTables_scrollBody {
-            overflow-x: auto !important;
-            overflow-y: auto !important;
-        }
-        
-        /* This ensures headers and cells align properly */
-        .dataTables_wrapper .dataTables_scrollBody table.dataTable {
-            margin: 0 !important;
-            border-collapse: separate !important;
-        }
-        
-        /* Additional fixes for horizontal scrolling with fixed headers */
-        .DTFC_LeftHeadWrapper table, 
-        .DTFC_RightHeadWrapper table,
-        .DTFC_LeftBodyWrapper table, 
-        .DTFC_RightBodyWrapper table {
-            border-collapse: separate !important;
-        }
-        
-        /* Ensure headers are properly positioned */
-        .fixedHeader-floating,
-        .fixedHeader-locked {
-            z-index: 102;
-        }
-        
-        /* Make table columns have consistent width */
-        table.dataTable thead th,
-        table.dataTable tbody td {
-            white-space: nowrap;
-            box-sizing: content-box !important;
-        }
-        
-        /* Fix Firefox specific issues */
-        @-moz-document url-prefix() {
-            .dataTables_scrollBody {
-                min-height: 300px !important;
-            }
-        }
-        
-        /* Style untuk filter nilai kolom */
-        .value-filter-container {
-            margin-bottom: 20px;
-        }
-
-        .filter-column {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 12px;
-            height: 100%;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-
-        .filter-column-title {
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: #495057;
-            margin-bottom: 12px;
-            border-bottom: 1px solid #dee2e6;
-            padding-bottom: 8px;
-        }
-
-        .filter-value-list {
-            max-height: 200px;
-            overflow-y: auto;
-        }
-
-        .form-check-input.value-filter-toggle {
-            cursor: pointer;
-        }
-
-        .form-check-input.value-filter-toggle:checked {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        .form-check-label {
-            cursor: pointer;
-            font-size: 0.85rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 150px;
-        }
-
-        /* Style untuk filter nilai kolom */
-        .value-filter-dropdown-container {
-            vertical-align: middle;
-            display: inline-block !important;
-            margin-left: 15px !important;
-            position: relative;
-            z-index: 1000;
-        }
-
-        /* Tombol filter utama */
-        .value-filter-dropdown-container .btn-outline-primary {
-            border-color: #ddd;
-            padding: 0.375rem 0.75rem;
-            font-size: 0.875rem;
-        }
-        
-        /* Badge jumlah filter */
-        .value-filter-dropdown-container .badge {
-            font-size: 0.7rem;
-            padding: 0.2em 0.5em;
-            margin-left: 0.3rem !important;
-        }
-
-        /* Menu dropdown filter */
-        .filter-dropdown-menu {
-            max-height: 600px;
-            overflow-y: auto;
-            width: 800px !important;
-            padding: 15px !important;
-            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(0, 0, 0, 0.1);
-            z-index: 1050 !important;
-        }
-
-        /* Header menu filter */
-        .filter-dropdown-menu h6 {
-            font-weight: 600;
-            margin-bottom: 0;
-            color: #333;
-        }
-
-        /* Warna background untuk card header filter */
-        .filter-column .card-header {
-            background-color: #f8f9fa;
-            border-bottom: 1px solid #dee2e6;
-            font-weight: 600;
-            font-size: 0.85rem;
-            padding: 0.5rem !important;
-        }
-
-        /* Container nilai filter dengan scroll */
-        .filter-value-list {
-            max-height: 150px;
-            overflow-y: auto;
-            font-size: 0.8rem;
-        }
-
-        /* Pointer untuk toggle */
-        .form-check-input.value-filter-toggle {
-            cursor: pointer;
-        }
-
-        .form-check-input.value-filter-toggle:checked {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-        }
-
-        .form-check-label.small {
-            cursor: pointer;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            display: inline-block;
-            max-width: calc(100% - 30px);
-            vertical-align: middle;
-        }
-
-        /* Style untuk scroll kustom filter-dropdown */
-        .filter-dropdown-menu::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        .filter-dropdown-menu::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
-        }
-
-        .filter-dropdown-menu::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-
-        .filter-dropdown-menu::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-
-        /* Toggle switch lebih kecil untuk menghemat ruang */
-        .filter-value-list .form-switch {
-            padding-left: 2.5em;
-        }
-
-        .filter-value-list .form-switch .form-check-input {
-            width: 2em;
-            margin-left: -2.5em;
-        }
-        
-        /* Fix untuk posisi filter dengan datatables */
-        .dataTables_wrapper .row:first-child {
-            align-items: center !important;
-            display: flex !important;
-            margin-bottom: 10px;
-        }
-        
-        .dataTables_length {
-            display: flex !important;
-            align-items: center !important;
-        }
-
-        /* Additional fix untuk dropdown */
-        .filter-dropdown-menu {
-            position: absolute !important;
-            top: 100% !important;
-            left: 0 !important;
-            z-index: 9999 !important;
-            display: none;
-        }
-        
-        .dropdown.show .filter-dropdown-menu {
-            display: block !important;
-        }
-        
-        /* Force style untuk filter container */
-        .value-filter-dropdown-container {
-            position: relative !important;
-            display: inline-block !important;
-            margin-left: 15px !important;
-            z-index: 9999 !important;
-            vertical-align: middle !important;
-        }
-        
-        /* Ensure Bootstrap dropdown works */
-        .dataTables_length::after {
-            display: block;
-            content: "";
-            clear: both;
-        }
-        
-        /* Direct filter button */
-        .direct-filter-button {
-            position: absolute;
-            top: 0;
-            right: 0;
-            padding: 8px;
-            margin: 8px;
-            z-index: 1000;
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            font-size: 0.9rem;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-
-        /* Styling untuk filter bubbles */
-        .filter-bubble {
-          display: inline-block;
-          padding: 6px 10px;
-          border-radius: 20px;
-          background-color: #4a6cf7;
-          color: white;
-          margin: 3px;
-          cursor: pointer;
-          user-select: none;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          transition: all 0.2s ease;
-        }
-        
-        .filter-bubble:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 3px 5px rgba(0,0,0,0.2);
-        }
-        
-        .filter-bubble.active {
-          background-color: #e0e0e0 !important;
-          color: #333 !important;
-          box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
-          transform: translateY(1px);
-        }
-        
-        /* Styling untuk filter pills */
-        .filter-pill {
-          padding: 6px 10px;
-          cursor: pointer;
-          transition: all 0.2s ease;
-        }
-        
-        .filter-pill:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 3px 5px rgba(0,0,0,0.2);
-        }
-        
-        .filter-pill.active {
-          background-color: #e0e0e0 !important;
-          color: #333 !important;
-        }
-        
-        /* Container filter responsif */
-        .filter-container {
-          margin-bottom: 20px;
-          padding: 15px;
-          background-color: #f8f9fa;
-          border-radius: 5px;
-          border: 1px solid #dee2e6;
-        }
-        
-        /* Animasi loading untuk tabel */
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-        
-        .table-responsive {
-          animation: fadeIn 0.5s ease;
-        }
-
-        /* DataTables wrapper styling */
-        .dataTables_wrapper {
-            width: 100%;
-            position: relative;
-        }
-
-        /* Reset scroll container styling */
-        .dataTables_scroll {
-            width: 100%;
-            overflow: visible;
-        }
-
-        /* Use a single container for horizontal scrolling */
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-            position: relative;
-        }
-
-        /* Force DataTables to use browser's native table layout */
-        table.dataTable {
-            width: 100% !important;
-            margin: 0 !important;
-            border-collapse: collapse !important;
-        }
-
-        /* Fix header styling */
-        table.dataTable thead th {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background-color: #f8f9fa;
-            border-bottom: 2px solid #dee2e6;
-            white-space: nowrap;
-            padding: 8px !important;
-        }
-
-        /* Ensure cells have consistent styling */
-        table.dataTable tbody td {
-            padding: 8px !important;
-            white-space: nowrap;
-        }
-
-        /* Remove all DataTables scroll features */
-        .dataTables_scrollHead,
-        .dataTables_scrollBody,
-        .dataTables_scrollFoot {
-            width: auto !important;
-            overflow: visible !important;
-        }
-
-        .dataTables_scrollHeadInner,
-        .dataTables_scrollBodyInner,
-        .dataTables_scrollFootInner {
-            width: auto !important;
-        }
-
-        /* Fix for DataTables scrolling structure */
-        .dataTables_wrapper .dataTables_scroll {
-            display: block !important; 
-            width: 100% !important;
-            position: relative !important;
-        }
-        
-        /* Force single container approach */
-        .dataTables_wrapper .dataTables_scroll, 
-        .dataTables_wrapper .dataTables_scrollBody {
-            overflow: visible !important;
-        }
-        
-        /* Disable fixed scrollHeadInner */
-        .dataTables_wrapper .dataTables_scrollHead {
-            display: none !important;
-            overflow: hidden !important;
-            position: absolute !important;
-        }
-        
-        /* Fix table display */
-        .dataTables_wrapper table.dataTable {
-            width: 100% !important;
-            margin: 0 !important;
-        }
-        
-        /* Container for manual scrolling */
-        .unified-scroll-container {
-            width: 100%;
-            overflow-x: auto !important;
-            position: relative;
-            max-height: 70vh;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-        }
-
-        /* Remove DataTables internal scrolling */
-        .dataTables_scrollHead,
-        .dataTables_scrollBody,
-        .dataTables_scrollFoot {
-            width: auto !important;
-            overflow: visible !important;
-        }
-
-        .dataTables_scrollHeadInner,
-        .dataTables_scrollBodyInner,
-        .dataTables_scrollFootInner {
-            width: auto !important;
-        }
-        
-        /* Fix header styling */
-        .fixed-header-table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background-color: #f8f9fc;
-            border-bottom: 2px solid #e3e6f0;
-        }
+        /* Semua style untuk tombol pagination telah dihapus */
     </style>
 
     <!-- CSS Link for Filter Toggle -->
@@ -1497,6 +713,11 @@
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="gwscanner-taskreg-tab" data-bs-toggle="pill" data-bs-target="#gwscanner-taskreg-data" type="button" role="tab">
+                                <i class="fas fa-clipboard-check me-2"></i>Checkroll_not_Sync_Gwscanner_Taskreg
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <button class="nav-link" id="history-tab" data-bs-toggle="pill" data-bs-target="#history-data" type="button" role="tab">
                                 <i class="fas fa-history me-2"></i>History Query
                             </button>
@@ -1611,6 +832,34 @@
                         <div class="stats-card bg-success">
                             <h5 class="card-title"><i class="fas fa-clock me-2"></i>Terakhir Diperbarui</h5>
                             <p class="card-text" id="lastUpdatedGwscannerOvertime">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- GWScanner-Taskreg Stats Cards -->
+                <div class="row mb-4 gwscanner-taskreg-stats" id="gwscanner-taskreg-stats" style="display: none;">
+                    <div class="col-md-3">
+                        <div class="stats-card bg-info">
+                            <h5 class="card-title"><i class="fas fa-database me-2"></i>Total Data Tidak Sinkron</h5>
+                            <p class="card-text" id="totalGwscannerTaskregData">0</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card bg-warning text-dark">
+                            <h5 class="card-title"><i class="fas fa-clipboard-list me-2"></i>Data di GWScanner</h5>
+                            <p class="card-text" id="errorGwscannerTaskregData">0</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card bg-danger">
+                            <h5 class="card-title"><i class="fas fa-exclamation-triangle me-2"></i>Perlu Disinkronkan</h5>
+                            <p class="card-text" id="actionNeededGwscannerTaskregData">0</p>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-card bg-success">
+                            <h5 class="card-title"><i class="fas fa-clock me-2"></i>Terakhir Diperbarui</h5>
+                            <p class="card-text" id="lastUpdatedGwscannerTaskreg">-</p>
                         </div>
                     </div>
                 </div>
@@ -1731,6 +980,27 @@
                                     <div>
                                         <strong>Memuat data GWScanner-Overtime yang tidak sinkron...</strong>
                                         <div id="gwscanner-overtime-loading-status" class="mt-2 small text-muted"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- GWScanner-Taskreg Tab -->
+                    <div class="tab-pane fade" id="gwscanner-taskreg-data" role="tabpanel">
+                        <!-- Filter Container for GWScanner Taskreg -->
+                        <div id="gwscanner-taskreg-filter-container" class="filter-container"></div>
+                        
+                        <div id="gwscanner-taskreg-container" class="data-container">
+                            <!-- Data GWScanner-Taskreg akan dimuat secara dinamis oleh JavaScript -->
+                            <div class="alert alert-info loading-indicator">
+                                <div class="d-flex align-items-center">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                                    <div>
+                                        <strong>Memuat data GWScanner-Taskreg yang tidak sinkron...</strong>
+                                        <div id="gwscanner-taskreg-loading-status" class="mt-2 small text-muted"></div>
                                     </div>
                                 </div>
                             </div>
@@ -2188,6 +1458,14 @@
           filters: ['STATUS_SYNC', 'RECORD_TAG_OVERTIME'],
           containerId: 'gwscanner-overtime-container',
           valueFilters: ['RECORD_TAG_OVERTIME', 'TAG_NO', 'WORKERCODE']
+        },
+        'gwscanner_taskreg_temp.json': {
+          title: 'Checkroll Not Sync GWScanner Taskreg',
+          tableId: 'gwscanner-taskreg-table',
+          tabSelector: '#gwscanner-taskreg-tab',
+          filters: ['WORKERCODE', 'TRANSSTATUS', 'RECORDTAG'],
+          containerId: 'gwscanner-taskreg-container',
+          valueFilters: ['WORKERCODE', 'FROMOCCODE', 'TOOCCODE', 'FIELDNO', 'JOBCODE']
         }
       };
       
@@ -2225,6 +1503,11 @@
             if (filename === 'gwscanner_overtime_not_sync_temp.json' && mapping.containerId !== 'gwscanner-overtime-data') {
               console.log(`Fixing containerId for ${filename}`);
               mapping.containerId = 'gwscanner-overtime-data';
+            }
+            
+            if (filename === 'gwscanner_taskreg_temp.json' && mapping.containerId !== 'gwscanner-taskreg-data') {
+              console.log(`Fixing containerId for ${filename}`);
+              mapping.containerId = 'gwscanner-taskreg-data';
             }
           }
         }
@@ -3320,6 +2603,20 @@
                 }
             }, 1000);
         });
+    </script>
+
+    <!-- Script untuk sinkronisasi scroll horizontal -->
+    <script>
+      $(document).ready(function() {
+        // Tambahkan event handler untuk sinkronisasi scroll horizontal pada semua tabel
+        $('.table-responsive').on('scroll', function() {
+          const tableId = $(this).find('table').attr('id');
+          if (tableId) {
+            const scrollLeft = $(this).scrollLeft();
+            $(`.table-responsive:has(#${tableId})`).scrollLeft(scrollLeft);
+          }
+        });
+      });
     </script>
 </body>
 </html> 

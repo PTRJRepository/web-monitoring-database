@@ -485,11 +485,8 @@ function displayDataInTable(data, mapping, tabElement) {
       data: data,
       columns: columns,
       processing: true,
-      deferRender: true,
-      scroller: true,
-      scrollY: '50vh',
       paging: true,
-      pageLength: 25,
+      pageLength: 10, // Default page length
       language: {
         "processing": "Memproses...",
         "search": "Cari:",
