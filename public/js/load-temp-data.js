@@ -34,6 +34,12 @@ const dataMapping = {
     containerId: 'gwscanner-overtime-container',
     tableId: 'gwscanner-overtime-table',
     title: 'Data GWScanner Overtime Not Sync'
+  },
+  'gwscanner_taskreg_temp.json': {
+    tabSelector: '[data-bs-target="#gwscanner-taskreg-data"], #gwscanner-taskreg-tab',
+    containerId: 'gwscanner-taskreg-container',
+    tableId: 'gwscanner-taskreg-table',
+    title: 'Data GWScanner Task Registration'
   }
 };
 
@@ -183,7 +189,8 @@ function loadDataSummaryOnly() {
     'bpjs_temp.json',
     'gwscanner_temp.json',
     'ffbworker_temp.json',
-    'gwscanner_overtime_not_sync_temp.json'
+    'gwscanner_overtime_not_sync_temp.json',
+    'gwscanner_taskreg_temp.json'
   ];
   
   // Tampilkan loading global
@@ -266,8 +273,20 @@ function loadAndDisplayActiveTabData(tabId) {
     `;
   }
   
+  // Set timer untuk menghentikan loading jika terlalu lama
+  const loadingTimeout = setTimeout(() => {
+    const container = document.getElementById(getContainerIdFromTabId(tabId));
+    if (container) {
+      console.log(`Timeout loading untuk tab ${tabId}, menampilkan pesan data kosong`);
+      container.innerHTML = '<div class="alert alert-warning"><i class="fas fa-info-circle me-2"></i><strong>Tidak ada data</strong> - Data tidak tersedia atau kosong setelah menunggu beberapa detik.</div>';
+    }
+  }, 10000); // 10 detik timeout
+  
   return loadDataFromTemp(filename)
     .then(data => {
+      // Clear timeout karena data berhasil dimuat
+      clearTimeout(loadingTimeout);
+      
       // Tandai bahwa tabel untuk tab ini sudah dimuat
       dataCache.loadedTables[tabId] = true;
       
@@ -284,6 +303,17 @@ function loadAndDisplayActiveTabData(tabId) {
       }
       
       return data;
+    })
+    .catch(error => {
+      // Clear timeout karena sudah ada error
+      clearTimeout(loadingTimeout);
+      
+      console.error(`Error loading data for tab ${tabId}:`, error);
+      const container = document.getElementById(getContainerIdFromTabId(tabId));
+      if (container) {
+        container.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i><strong>Error:</strong> ${error.message}</div>`;
+      }
+      return Promise.reject(error);
     });
 }
 
@@ -300,6 +330,8 @@ function getFilenameFromTabId(tabId) {
       return 'ffbworker_temp.json';
     case 'gwscanner-overtime-tab':
       return 'gwscanner_overtime_not_sync_temp.json';
+    case 'gwscanner-taskreg-tab':
+      return 'gwscanner_taskreg_temp.json';
     default:
       return null;
   }
@@ -318,6 +350,8 @@ function getContainerIdFromTabId(tabId) {
       return 'ffbworker-data';
     case 'gwscanner-overtime-tab':
       return 'gwscanner-overtime-data';
+    case 'gwscanner-taskreg-tab':
+      return 'gwscanner-taskreg-data';
     default:
       return null;
   }
@@ -336,6 +370,8 @@ function getDisplayNameFromTabId(tabId) {
       return 'FFB Worker';
     case 'gwscanner-overtime-tab':
       return 'GWScanner Overtime';
+    case 'gwscanner-taskreg-tab':
+      return 'GWScanner Task Registration';
     default:
       return 'Data';
   }
@@ -354,6 +390,8 @@ function getTabIdForFilename(filename) {
       return 'ffbworker-tab';
     case 'gwscanner_overtime_not_sync_temp.json':
       return 'gwscanner-overtime-tab';
+    case 'gwscanner_taskreg_temp.json':
+      return 'gwscanner-taskreg-tab';
     default:
       return null;
   }
@@ -621,7 +659,8 @@ function getFilenameForMapping(mapping) {
     'bpjs-container': 'bpjs_temp.json',
     'gwscanner-container': 'gwscanner_temp.json',
     'ffb-worker-container': 'ffbworker_temp.json', 
-    'gwscanner-overtime-container': 'gwscanner_overtime_not_sync_temp.json'
+    'gwscanner-overtime-container': 'gwscanner_overtime_not_sync_temp.json',
+    'gwscanner-taskreg-container': 'gwscanner_taskreg_temp.json'
   };
   
   return lookup[mapping.containerId] || '';
