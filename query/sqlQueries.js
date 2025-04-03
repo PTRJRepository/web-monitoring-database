@@ -214,7 +214,8 @@ WITH DuplicateTransactions AS (
     FROM 
         [db_ptrj].[dbo].[GWScanner_Transaction]
     WHERE 
-        TRANSDATE >= DATEADD(day, -7, GETDATE())  -- Last 7 days
+        TRANSDATE >= DATEFROMPARTS(YEAR(GETDATE()), 3, 1)  -- Dari awal bulan Maret
+        AND TRANSDATE <= GETDATE()  -- Sampai sekarang
 )
 SELECT 
     *
@@ -251,7 +252,8 @@ WITH WorkerTransactions AS (
         [db_ptrj].[dbo].[GWScanner_Transaction] t
         LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e ON t.WORKERCODE = e.EmpCode
     WHERE 
-        t.TRANSDATE >= DATEADD(day, -7, GETDATE())  -- Last 7 days
+        t.TRANSDATE >= DATEFROMPARTS(YEAR(GETDATE()), 3, 1)  -- Dari awal bulan Maret
+        AND t.TRANSDATE <= GETDATE()  -- Sampai sekarang
         AND e.PosCode NOT IN ('HAR')  -- Exclude harvester positions
 )
 SELECT 
@@ -266,11 +268,10 @@ ORDER BY
 
 // Query untuk monitoring sinkronisasi GWScanner dan Overtime
 const SYNC_GWSCANNER_OVERTIME_QUERY = `
--- Parameter bulan dan tahun otomatis menggunakan bulan dan tahun saat ini
-DECLARE @TargetMonth INT = MONTH(GETDATE()); -- Bulan saat ini
+-- Parameter bulan dan tahun untuk melihat data dari awal Maret hingga sekarang
 DECLARE @TargetYear INT = YEAR(GETDATE()); -- Tahun saat ini
-DECLARE @StartDate DATE = DATEFROMPARTS(@TargetYear, @TargetMonth, 1); -- Tanggal awal bulan
-DECLARE @EndDate DATE = EOMONTH(@StartDate); -- Tanggal akhir bulan
+DECLARE @StartDate DATE = DATEFROMPARTS(@TargetYear, 3, 1); -- Awal bulan Maret
+DECLARE @EndDate DATE = GETDATE(); -- Sampai hari ini
 
 -- Bagian 1: Data yang ada di Overtime tapi tidak ada di GWScanner
 SELECT 

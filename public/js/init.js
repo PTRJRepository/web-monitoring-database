@@ -56,7 +56,8 @@ window.loadDataSummaryOnly = function() {
     'bpjs_temp.json',
     'gwscanner_temp.json',
     'ffbworker_temp.json',
-    'gwscanner_overtime_not_sync_temp.json'
+    'gwscanner_overtime_not_sync_temp.json',
+    'gwscanner_taskreg_temp.json'
   ];
   
   return Promise.allSettled(files.map(file => {
@@ -248,6 +249,7 @@ function getFilenameFromTabId(tabId) {
     case 'gwscanner-tab': return 'gwscanner_temp.json';
     case 'ffbworker-tab': return 'ffbworker_temp.json';
     case 'gwscanner-overtime-tab': return 'gwscanner_overtime_not_sync_temp.json';
+    case 'gwscanner-taskreg-tab': return 'gwscanner_taskreg_temp.json';
     case 'monitoring-tab': 
       // Tab monitoring mungkin tidak perlu file data khusus, gunakan file default
       console.log('Tab monitoring terdeteksi, menggunakan summary data');
@@ -354,98 +356,8 @@ function displayDataInTable(data, tabId) {
     
     console.log(`DataTable untuk ${tableId} berhasil diinisialisasi`);
     
-    // Tambahkan filter bubbles di atas tabel
-    const filterContainer = document.createElement('div');
-    filterContainer.className = 'filter-container mb-3';
-    container.insertBefore(filterContainer, container.firstChild);
-    
-    // Tentukan kolom yang akan digunakan untuk filter
-    const priorityFields = ['TOOCCODE', 'FROMOCCODE', 'TRANSSTATUS', 'SCANNERUSERCODE'];
-    let filterField = '';
-    
-    // Cari kolom yang akan digunakan sebagai filter (gunakan kolom prioritas jika ada)
-    for (const field of priorityFields) {
-      if (Object.keys(data[0]).includes(field)) {
-        filterField = field;
-        break;
-      }
-    }
-    
-    // Jika tidak ada kolom prioritas, gunakan kolom pertama yang memiliki nilai berbeda
-    if (!filterField) {
-      const dataKeys = Object.keys(data[0]);
-      for (const key of dataKeys) {
-        const uniqueValues = new Set(data.map(item => item[key]));
-        if (uniqueValues.size > 1 && uniqueValues.size <= 10) {
-          filterField = key;
-          break;
-        }
-      }
-    }
-    
-    // Jika ada kolom untuk difilter, tambahkan filter bubbles
-    if (filterField) {
-      const uniqueValues = [...new Set(data.map(item => item[filterField]))].filter(Boolean);
-      
-      if (uniqueValues.length > 0 && uniqueValues.length <= 20) {
-        // Buat objek filter
-        const filters = [{
-          field: filterField,
-          values: uniqueValues
-        }];
-        
-        // Tambahkan fungsi addFilterBubbles dari load-temp-data.js jika tersedia
-        if (typeof window.addFilterBubbles === 'function') {
-          window.addFilterBubbles(filterContainer, data, filters, dataTable);
-        } else {
-          // Implementasi sederhana jika fungsi asli tidak tersedia
-          const bubbleContainer = document.createElement('div');
-          bubbleContainer.className = 'filter-bubbles p-2 bg-light border rounded mb-3';
-          bubbleContainer.innerHTML = `<h6 class="mb-2">Filter ${formatColumnTitle(filterField)}:</h6><div class="d-flex flex-wrap gap-1" id="bubbles-${tableId}"></div>`;
-          filterContainer.appendChild(bubbleContainer);
-          
-          const bubblesWrapper = document.getElementById(`bubbles-${tableId}`);
-          uniqueValues.forEach(value => {
-            if (!value) return;
-            const bubble = document.createElement('span');
-            bubble.className = 'badge rounded-pill bg-primary me-1 mb-1 filter-pill';
-            bubble.style.cursor = 'pointer';
-            bubble.textContent = value;
-            bubble.setAttribute('data-value', value);
-            bubble.setAttribute('data-field', filterField);
-            
-            bubble.addEventListener('click', function() {
-              this.classList.toggle('active');
-              
-              // Handle filter logic
-              const activeBubbles = Array.from(bubblesWrapper.querySelectorAll('.filter-pill.active'))
-                .map(b => b.getAttribute('data-value'));
-              
-              if (activeBubbles.length > 0) {
-                const regex = activeBubbles.map(v => `^${v}$`).join('|');
-                dataTable.column(filterField + ':name').search(regex, true, false).draw();
-              } else {
-                dataTable.column(filterField + ':name').search('').draw();
-              }
-            });
-            
-            bubblesWrapper.appendChild(bubble);
-          });
-          
-          // Tambahkan reset button
-          const resetBtn = document.createElement('button');
-          resetBtn.className = 'btn btn-sm btn-outline-secondary ms-2';
-          resetBtn.innerHTML = '<i class="fas fa-times me-1"></i>Reset';
-          resetBtn.addEventListener('click', function() {
-            bubblesWrapper.querySelectorAll('.filter-pill.active').forEach(pill => {
-              pill.classList.remove('active');
-            });
-            dataTable.search('').columns().search('').draw();
-          });
-          bubbleContainer.appendChild(resetBtn);
-        }
-      }
-    }
+    // Filter functionality has been removed
+    console.log("Table structure unified without filters");
   } catch (error) {
     console.error(`Error saat inisialisasi DataTable:`, error);
     container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i><strong>Error:</strong> ' + error.message + '</div>';
@@ -590,4 +502,4 @@ function updateDbConnectionStatus() {
 }
 
 // Expose fungsi getFilenameFromTabId ke global scope
-window.getFilenameFromTabId = getFilenameFromTabId; 
+window.getFilenameFromTabId = getFilenameFromTabId;

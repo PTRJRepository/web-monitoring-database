@@ -28,6 +28,14 @@ document.addEventListener("DOMContentLoaded", function() {
     // Setup auto refresh data dengan jitter
     setupAutoRefreshData();
     
+    // Add event listener for GWScanner refresh button
+    const refreshGWScannerBtn = document.getElementById('refreshGWScannerBtn');
+    if (refreshGWScannerBtn) {
+        refreshGWScannerBtn.addEventListener('click', function() {
+            refreshGWScannerData();
+        });
+    }
+    
     console.log("Application initialization completed");
 });
 
@@ -535,4 +543,42 @@ function showToast(message, type = 'info') {
     toastElement.addEventListener('hidden.bs.toast', function() {
         toastElement.remove();
     });
+}
+
+/**
+ * Refresh data GWScanner
+ */
+function refreshGWScannerData() {
+    // Tampilkan loading
+    showLoading();
+    
+    // Panggil API untuk refresh data GWScanner
+    fetch('/api/refresh/gwscanner')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                // Tampilkan notifikasi sukses
+                createToast('success', 'Sukses', 'Data GWScanner berhasil diperbarui');
+                
+                // Update waktu terakhir diperbarui
+                updateLastUpdated(result.lastUpdated);
+                
+                // Reload halaman untuk menampilkan data terbaru
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+                
+                // Sembunyikan loading
+                hideLoading();
+            } else {
+                console.error('Error refreshing GWScanner data:', result.error || 'Unknown error');
+                createToast('error', 'Error', 'Gagal memperbarui data GWScanner');
+                hideLoading();
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing GWScanner data:', error);
+            createToast('error', 'Error', 'Gagal memperbarui data GWScanner');
+            hideLoading();
+        });
 } 

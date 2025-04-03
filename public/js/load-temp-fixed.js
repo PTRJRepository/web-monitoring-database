@@ -442,16 +442,16 @@ function displayDataInTable(data, mapping, tabElement) {
   let dataTable;
   
   try {
-    // Inisialisasi DataTable
+    // Inisialisasi DataTable dengan konfigurasi sederhana
     dataTable = $('#' + tableId).DataTable({
       data: data,
       columns: columns,
       processing: true,
       deferRender: true,
-      scroller: true,
-      scrollY: '50vh',
       paging: true,
+      ordering: true,
       pageLength: 25,
+      pagingType: "simple", // Hanya tampilkan Previous dan Next
       language: {
         "processing": "Memproses...",
         "search": "Cari:",
@@ -465,15 +465,107 @@ function displayDataInTable(data, mapping, tabElement) {
           "next": "Selanjutnya",
           "previous": "Sebelumnya"
         }
-      }
+      },
+      dom: 'lrtip' // Layout sederhana: length, table, info, pagination (tanpa filter)
     });
-    
-    console.log(`DataTable untuk ${tableId} berhasil diinisialisasi`);
     
     // Tambahkan filter bubbles di atas tabel
     const filterContainer = document.createElement('div');
     filterContainer.className = 'filter-container';
     container.prepend(filterContainer);
+    
+    // Tambahkan filter search manual setelah tabel
+    const searchContainer = document.createElement('div');
+    searchContainer.className = 'search-container mb-3 mt-3';
+    searchContainer.innerHTML = `
+      <div class="input-group">
+        <input type="text" class="form-control" placeholder="Cari..." id="${tableId}-search">
+        <button class="btn btn-primary" type="button" id="${tableId}-search-btn">
+          <i class="fas fa-search"></i>
+        </button>
+      </div>
+    `;
+    $(container).find('.table-responsive').after(searchContainer);
+    
+    // Tambahkan fungsionalitas pencarian
+    $(`#${tableId}-search-btn`).on('click', function() {
+      const searchTerm = $(`#${tableId}-search`).val();
+      dataTable.search(searchTerm).draw();
+    });
+    
+    // Enable pencarian dengan menekan Enter
+    $(`#${tableId}-search`).on('keyup', function(e) {
+      if (e.key === 'Enter') {
+        const searchTerm = $(this).val();
+        dataTable.search(searchTerm).draw();
+      }
+    });
+    
+    // Tambahkan navigasi halaman manual
+    const paginationContainer = document.createElement('div');
+    paginationContainer.className = 'custom-pagination mt-3 d-flex justify-content-between align-items-center';
+    
+    // Info halaman
+    const pageInfo = document.createElement('div');
+    pageInfo.className = 'page-info';
+    pageInfo.innerHTML = `Halaman <span id="${tableId}-page-current">1</span> dari <span id="${tableId}-page-total">1</span>`;
+    
+    // Tombol navigasi
+    const pageButtons = document.createElement('div');
+    pageButtons.className = 'page-buttons';
+    pageButtons.innerHTML = `
+      <button class="btn btn-sm btn-outline-primary me-1" id="${tableId}-prev">
+        <i class="fas fa-chevron-left"></i> Sebelumnya
+      </button>
+      <button class="btn btn-sm btn-outline-primary" id="${tableId}-next">
+        Selanjutnya <i class="fas fa-chevron-right"></i>
+      </button>
+    `;
+    
+    paginationContainer.appendChild(pageInfo);
+    paginationContainer.appendChild(pageButtons);
+    $(container).find('.table-responsive').after(paginationContainer);
+    
+    // Update info halaman
+    function updatePageInfo() {
+      const info = dataTable.page.info();
+      $(`#${tableId}-page-current`).text(info.page + 1);
+      $(`#${tableId}-page-total`).text(info.pages);
+      
+      // Update status tombol
+      if (info.page === 0) {
+        $(`#${tableId}-prev`).prop('disabled', true);
+      } else {
+        $(`#${tableId}-prev`).prop('disabled', false);
+      }
+      
+      if (info.page === info.pages - 1) {
+        $(`#${tableId}-next`).prop('disabled', true);
+      } else {
+        $(`#${tableId}-next`).prop('disabled', false);
+      }
+    }
+    
+    // Initialize pagination info
+    updatePageInfo();
+    
+    // Event handler untuk tombol navigasi
+    $(`#${tableId}-prev`).on('click', function() {
+      dataTable.page('previous').draw('page');
+      updatePageInfo();
+    });
+    
+    $(`#${tableId}-next`).on('click', function() {
+      dataTable.page('next').draw('page');
+      updatePageInfo();
+    });
+    
+    // Update pagination info when DataTable changes page
+    dataTable.on('page.dt', function() {
+      updatePageInfo();
+    });
+    
+    console.log(`DataTable untuk ${tableId} berhasil diinisialisasi dengan navigasi kustom`);
     
     // Tentukan kolom yang akan digunakan untuk filter
     const priorityFields = ['TOOCCODE', 'FROMOCCODE', 'TRANSSTATUS', 'SCANNERUSERCODE'];
@@ -781,47 +873,8 @@ function addFilterBubbles(container, data, filters, dataTable) {
                 
                 // Buat filter baru berdasarkan nilai yang dipilih
                 const filterFunc = function(settings, data, dataIndex, rowData) {
-                  // Nama fungsi untuk identifikasi
-                  filterFunc.name = `filterFor_${tableId}_${filter.field}`;
-                  
-                  // Skip jika bukan tabel yang tepat
-                  if (settings.nTable.id !== tableId) return true;
-                  
-                  // Cari posisi kolom secara manual
-                  if (!filterFunc.columnIndex) {
-                    try {
-                      // Coba dapatkan dari API
-                      filterFunc.columnIndex = dataTable.column(`${filter.field}:name`).index();
-                    } catch (e) {
-                      console.log(`Mencari kolom ${filter.field} secara manual`);
-                      
-                      // Cari dalam header berdasarkan teks
-                      const headers = $(settings.nTHead).find('th').map(function() {
-                        return $(this).text().trim();
-                      }).get();
-                      
-                      // Periksa nama kolom yang diformat
-                      const formattedName = formatColumnTitle(filter.field);
-                      filterFunc.columnIndex = headers.indexOf(formattedName);
-                      
-                      if (filterFunc.columnIndex === -1) {
-                        console.error(`Kolom ${filter.field} tidak ditemukan dalam header:`, headers);
-                        return true; // Jangan filter jika kolom tidak ditemukan
-                      }
-                    }
-                  }
-                  
-                  // Periksa nilai dalam kolom
-                  if (filterFunc.columnIndex >= 0) {
-                    const cellValue = rowData ? 
-                      (rowData[filter.field] || '').toString() : 
-                      data[filterFunc.columnIndex].toString();
-                    
-                    // Baris dipertahankan jika nilainya cocok dengan nilai yang dipilih
-                    return activeBubbles.includes(cellValue);
-                  }
-                  
-                  return true; // Default: tampilkan baris jika kolom tidak ditemukan
+                  // Filter functionality has been disabled
+                  return true; // Always show all rows
                 };
                 
                 // Tambahkan filter ke DataTables dan redraw
@@ -846,8 +899,7 @@ function addFilterBubbles(container, data, filters, dataTable) {
             console.error(`Error saat menerapkan filter untuk kolom ${filter.field}:`, error);
             showFilterNotification('gagal', `Tidak dapat memfilter kolom ${formatColumnTitle(filter.field)}`, 'danger');
           }
-        }
-      });
+        });
       
       bubblesContainer.appendChild(bubble);
     });

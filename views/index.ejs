@@ -47,38 +47,7 @@
             font-size: 0.9rem;
         }
         
-        /* Filter Bubble Styles */
-        .filter-bubble {
-            padding: 5px 10px;
-            background-color: #4a6cf7;
-            color: white;
-            border-radius: 20px;
-            font-size: 12px;
-            cursor: pointer;
-            user-select: none;
-            margin: 2px;
-            transition: all 0.2s;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            display: inline-block;
-        }
-        .filter-bubble:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 3px 5px rgba(0,0,0,0.2);
-        }
-        .filter-bubble.active {
-            background-color: #e0e0e0;
-            color: #333;
-        }
-        .filter-bubble.scanner {
-            background-color: #ff9800;
-        }
-        .standalone-filter-bar {
-            margin: 15px 0;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            border: 1px solid #dee2e6;
-        }
+        /* Filter styles telah dihapus */
         
         /* Loading Overlay */
         .loading-overlay {
@@ -593,8 +562,7 @@
         /* Semua style untuk tombol pagination telah dihapus */
     </style>
 
-    <!-- CSS Link for Filter Toggle -->
-    <link href="/css/filter-toggle.css" rel="stylesheet">
+    <!-- CSS untuk filter telah dihapus -->
 </head>
 <body>
     <!-- Add this near the top of the body -->
@@ -883,8 +851,7 @@
                     
                     <!-- Tunjangan Beras Tab -->
                     <div class="tab-pane fade show active" id="tunjangan-data" role="tabpanel">
-                        <!-- Filter Container for Tunjangan Beras -->
-                        <div id="tunjangan-filter-container" class="filter-container"></div>
+                        <!-- Container untuk Tunjangan Beras -->
                         
                         <div id="tunjangan-beras-container" class="data-container">
                             <!-- Data tunjangan akan dimuat secara dinamis oleh JavaScript -->
@@ -904,8 +871,7 @@
                     
                     <!-- BPJS Tab -->
                     <div class="tab-pane fade" id="bpjs-data" role="tabpanel">
-                        <!-- Filter Container for BPJS -->
-                        <div id="bpjs-filter-container" class="filter-container"></div>
+                        <!-- Container untuk BPJS -->
                         
                         <div id="bpjs-container" class="data-container">
                             <!-- Data BPJS akan dimuat secara dinamis oleh JavaScript -->
@@ -925,8 +891,7 @@
 
                     <!-- FFB Worker Tab (Non-Pemanen dengan Ripe) -->
                     <div class="tab-pane fade" id="ffbworker-data" role="tabpanel">
-                        <!-- Filter Container for FFB Worker -->
-                        <div id="ffbworker-filter-container" class="filter-container"></div>
+                        <!-- Container untuk FFB Worker -->
                         
                         <div id="ffb-worker-container" class="data-container">
                             <!-- Data FFB Worker akan dimuat secara dinamis oleh JavaScript -->
@@ -946,9 +911,13 @@
                     
                     <!-- GWScanner Tab -->
                     <div class="tab-pane fade" id="gwscanner-data" role="tabpanel">
-                        <!-- Filter Container for GWScanner -->
-                        <div id="gwscanner-filter-container" class="filter-container"></div>
+                        <div class="d-flex justify-content-end mb-3">
+                            <button id="refreshGWScannerBtn" class="btn btn-primary">
+                                <i class="fas fa-sync-alt me-2"></i>Refresh Data GWScanner
+                            </button>
+                        </div>
                         
+                        <!-- Container untuk GWScanner -->
                         <div id="gwscanner-container" class="data-container">
                             <!-- Data GWScanner akan dimuat secara dinamis oleh JavaScript -->
                             <div class="alert alert-info loading-indicator">
@@ -967,8 +936,7 @@
                     
                     <!-- GWScanner-Overtime Tab -->
                     <div class="tab-pane fade" id="gwscanner-overtime-data" role="tabpanel">
-                        <!-- Filter Container for GWScanner Overtime -->
-                        <div id="gwscanner-overtime-filter-container" class="filter-container"></div>
+                        <!-- Container untuk GWScanner Overtime -->
                         
                         <div id="gwscanner-overtime-container" class="data-container">
                             <!-- Data GWScanner-Overtime akan dimuat secara dinamis oleh JavaScript -->
@@ -988,8 +956,7 @@
                     
                     <!-- GWScanner-Taskreg Tab -->
                     <div class="tab-pane fade" id="gwscanner-taskreg-data" role="tabpanel">
-                        <!-- Filter Container for GWScanner Taskreg -->
-                        <div id="gwscanner-taskreg-filter-container" class="filter-container"></div>
+                        <!-- Container untuk GWScanner Taskreg -->
                         
                         <div id="gwscanner-taskreg-container" class="data-container">
                             <!-- Data GWScanner-Taskreg akan dimuat secara dinamis oleh JavaScript -->
@@ -1582,14 +1549,13 @@
     <script src="https://cdn.datatables.net/fixedheader/3.3.2/js/dataTables.fixedHeader.min.js"></script>
     
     <!-- Script load-temp-data.js di akhir, setelah semua script lain -->
-    <script src="/js/filter-bubbles.js"></script>
     <script src="/js/init.js"></script>
     <script src="/js/load-temp-data.js"></script>
 
     <script>
-        // Debug script untuk memastikan filter nilai dibuat
+        // Script debug telah dihapus
         document.addEventListener('DOMContentLoaded', function() {
-            console.log("Debug: Setting up filter debug tools");
+            console.log("Debug: Setting up debug tools");
             
             // Observer untuk DataTables initialization
             const observer = new MutationObserver(function(mutations) {
@@ -1599,25 +1565,15 @@
                             const node = mutation.addedNodes[i];
                             if (node.classList && node.classList.contains('dataTables_wrapper')) {
                                 console.log("Debug: DataTable wrapper detected", node);
-                                
-                                // Cari length selector di dalam wrapper
-                                const lengthSelector = node.querySelector('.dataTables_length');
-                                if (lengthSelector) {
-                                    console.log("Debug: Found length selector", lengthSelector);
-                                    
-                                    // Cek jika filter sudah ditambahkan
-                                    const filterContainer = node.querySelector('.value-filter-dropdown-container');
-                                    if (!filterContainer) {
-                                        console.log("Debug: Filter container not found, creating manually");
-                                        
-                                        // Tambahkan container filter nilai secara manual
-                                        const filterBtn = document.createElement('div');
-                                        filterBtn.className = 'value-filter-dropdown-container d-inline-block ms-3';
-                                        filterBtn.innerHTML = `
-                                            <div class="dropdown d-inline-block">
-                                                <button class="btn btn-outline-primary dropdown-toggle" type="button" 
-                                                        data-bs-toggle="dropdown" aria-expanded="false">
-                                                    <i class="fas fa-filter me-1"></i>Filter Nilai
+                            }
+                        }
+                    }
+                });
+            });
+            
+            // Observe the document body for changes
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
                                                     <span class="badge bg-primary ms-1">0</span>
                                                 </button>
                                                 <div class="dropdown-menu filter-dropdown-menu p-3">
@@ -2045,101 +2001,11 @@
             }
           });
           
-          // Pastikan filter bubbles tetap bekerja dengan struktur baru
-          rehookFilters();
+          // Filter functionality has been removed
+          console.log("Table structure unified without filters");
         }
         
-        // Fungsi untuk memperbaiki kembali fungsi filter
-        function rehookFilters() {
-          console.log("Memperbaiki fungsi filter untuk struktur tabel baru...");
-          
-          // Mengembalikan filter toggle events untuk semua tabel
-          $('.filter-bubble').off('click').on('click', function() {
-            const $this = $(this);
-            const filterValue = $this.data('filter-value');
-            const filterColumn = $this.data('filter-column');
-            const tableId = $this.data('table-id');
-            
-            // Toggle class active
-            $this.toggleClass('active');
-            
-            // Cari tabel yang sesuai (termasuk unified table)
-            let $table;
-            if ($('#unified-' + tableId).length) {
-              $table = $('#unified-' + tableId);
-            } else {
-              $table = $('#' + tableId);
-            }
-            
-            // Dapatkan DataTable API
-            if ($.fn.DataTable.isDataTable($table)) {
-              const dataTable = $table.DataTable();
-              
-              // Reparasi search dan filter setelah perubahan struktur
-              setTimeout(function() {
-                // Kumpulkan semua filter aktif
-                const activeFilters = {};
-                
-                $('.filter-bubble').each(function() {
-                  const $bubble = $(this);
-                  const bubbleTableId = $bubble.data('table-id');
-                  
-                  // Hanya proses filter untuk tabel ini
-                  if (bubbleTableId === tableId || bubbleTableId === 'unified-' + tableId) {
-                    const column = $bubble.data('filter-column');
-                    const value = $bubble.data('filter-value');
-                    
-                    if ($bubble.hasClass('active')) {
-                      if (!activeFilters[column]) {
-                        activeFilters[column] = [];
-                      }
-                      activeFilters[column].push(value);
-                    }
-                  }
-                });
-                
-                console.log("Filter aktif:", activeFilters);
-                
-                // Clear semua filter dahulu
-                dataTable.search('').columns().search('').draw();
-                
-                // Terapkan filter baru
-                $.each(activeFilters, function(column, values) {
-                  // Jika ada nilai filter aktif
-                  if (values && values.length > 0) {
-                    // Buat regex search string dari nilai filter aktif
-                    const regex = values.map(value => `^${value}$`).join('|');
-                    console.log(`Menerapkan filter: ${regex} pada kolom ${column}`);
-                    
-                    // Cari kolom yang sesuai
-                    const columnIndex = findColumnIndex(dataTable, column);
-                    if (columnIndex !== -1) {
-                      dataTable.column(columnIndex).search(regex, true, false);
-                    }
-                  }
-                });
-                
-                // Draw tabel untuk menerapkan filter
-                dataTable.draw();
-              }, 100);
-            }
-          });
-          
-          // Helper function untuk menemukan index kolom berdasarkan nama/header
-          function findColumnIndex(table, columnName) {
-            let columnIndex = -1;
-            
-            table.columns().every(function(index) {
-              const header = $(this.header()).text().trim();
-              if (header === columnName) {
-                columnIndex = index;
-                return false; // break loop
-              }
-            });
-            
-            return columnIndex;
-          }
-        }
+        // Filter functionality has been removed
         
         // Jalankan fix setelah tabel dimuat
         setTimeout(unifyTableScrolling, 1000);
@@ -2158,465 +2024,15 @@
       });
     </script>
     
-    <!-- Fix untuk fungsionalitas filter -->
-    <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        // Fungsi untuk memperbaiki filter pada tabel yang telah direstrukturisasi
-        function fixFilters() {
-          console.log("Memperbaiki filter DataTables...");
-          
-          // Cari semua wadah filter
-          $('.filter-container, [id^="filter-container-"]').each(function() {
-            const $filterContainer = $(this);
-            
-            // Cari ID tabel target
-            let targetTableId = $filterContainer.data('target-table');
-            if (!targetTableId) {
-              // Coba cari dari filter bubble di dalamnya
-              const $firstBubble = $filterContainer.find('.filter-bubble').first();
-              if ($firstBubble.length) {
-                targetTableId = $firstBubble.data('table-id');
-              }
-            }
-            
-            if (targetTableId) {
-              console.log(`Ditemukan filter untuk tabel ${targetTableId}`);
-              
-              // Cari tabel asli dan tabel unified
-              const $originalTable = $('#' + targetTableId);
-              const $unifiedTable = $('#unified-' + targetTableId);
-              
-              // Tabel yang akan kita gunakan (unified jika ada, original jika tidak)
-              const $activeTable = $unifiedTable.length ? $unifiedTable : $originalTable;
-              
-              // Dapatkan DataTable API
-              if ($.fn.DataTable.isDataTable($activeTable)) {
-                const dataTable = $activeTable.DataTable();
-                
-                // Update data-table-id pada semua filter bubble
-                $filterContainer.find('.filter-bubble').each(function() {
-                  const $bubble = $(this);
-                  $bubble.attr('data-table-id', $activeTable.attr('id'));
-                  
-                  // Perbarui juga ID tabel internal jika ada
-                  if ($bubble.data('table-id')) {
-                    $bubble.data('table-id', $activeTable.attr('id'));
-                  }
-                  
-                  // Pastikan event click diatasi dengan benar
-                  $bubble.off('click').on('click', function() {
-                    const $this = $(this);
-                    $this.toggleClass('active');
-                    
-                    // Kumpulkan semua filter aktif berdasarkan kolom
-                    const activeFilters = {};
-                    
-                    $filterContainer.find('.filter-bubble').each(function() {
-                      const $filterBubble = $(this);
-                      if ($filterBubble.hasClass('active')) {
-                        const column = $filterBubble.data('filter-column');
-                        const value = $filterBubble.data('filter-value');
-                        
-                        if (!activeFilters[column]) {
-                          activeFilters[column] = [];
-                        }
-                        
-                        activeFilters[column].push(value);
-                      }
-                    });
-                    
-                    console.log("Menerapkan filter:", activeFilters);
-                    
-                    // Reset semua filter terlebih dahulu
-                    dataTable.search('').columns().search('').draw();
-                    
-                    // Terapkan filter berdasarkan kolom
-                    let hasActiveFilter = false;
-                    
-                    // Terapkan semua filter aktif
-                    $.each(activeFilters, function(column, values) {
-                      if (values && values.length > 0) {
-                        hasActiveFilter = true;
-                        
-                        // Buat regex untuk filter
-                        const regex = values.map(value => `^${value}$`).join('|');
-                        
-                        // Cari kolom yang sesuai
-                        let columnIndex = -1;
-                        dataTable.columns().every(function(index) {
-                          const header = $(this.header()).text().trim();
-                          if (header === column) {
-                            columnIndex = index;
-                            return false; // break loop
-                          }
-                        });
-                        
-                        if (columnIndex >= 0) {
-                          console.log(`Menerapkan filter ${regex} pada kolom ${column} (index: ${columnIndex})`);
-                          dataTable.column(columnIndex).search(regex, true, false);
-                        }
-                      }
-                    });
-                    
-                    // Jika tidak ada filter aktif, tampilkan semua data
-                    if (!hasActiveFilter) {
-                      console.log("Tidak ada filter aktif, menampilkan semua data");
-                    }
-                    
-                    // Redraw tabel
-                    dataTable.draw();
-                  });
-                });
-                
-                console.log(`Filter pada tabel ${targetTableId} berhasil diperbaiki`);
-              } else {
-                console.warn(`DataTable API tidak ditemukan untuk tabel ${targetTableId}`);
-              }
-            }
-          });
-        }
-        
-        // Jalankan perbaikan filter setelah tabel dimuat dan direstrukturisasi
-        setTimeout(fixFilters, 2500);
-        setTimeout(fixFilters, 5000);
-        
-        // Jalankan kembali ketika tab diubah
-        $('a[data-bs-toggle="tab"]').on('shown.bs.tab', function() {
-          setTimeout(fixFilters, 1000);
-        });
-      });
-    </script>
+    <!-- Filter functionality has been removed -->
 
-    <!-- JS File for Filter Toggle Module -->
-    <script src="/js/modules/filter-toggle.js"></script>
-
-    <script>
-        // Initialize filter toggle when document is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            // Tab event listener to initialize filter on tab change
-            const tabLinks = document.querySelectorAll('.nav-link[id$="-tab"]');
-            
-            tabLinks.forEach(function(tab) {
-                tab.addEventListener('click', function() {
-                    const tabId = this.id.replace('-tab', '');
-                    
-                    // Initialize filter for the active tab
-                    setTimeout(() => {
-                        initFilterForTab(tabId);
-                    }, 500);
-                });
-            });
-            
-            // Initialize filter for default active tab
-            const activeTab = document.querySelector('.nav-link.active[id$="-tab"]');
-            if (activeTab) {
-                const tabId = activeTab.id.replace('-tab', '');
-                setTimeout(() => {
-                    initFilterForTab(tabId);
-                }, 500);
-            }
-            
-            // Function to initialize filter for a tab
-            function initFilterForTab(tabId) {
-                const containerId = `${tabId}-filter-container`;
-                const container = document.getElementById(containerId);
-                
-                if (!container) return;
-                
-                try {
-                    // Skip history tab and any other non-data tabs
-                    if (tabId === 'history') return;
-                    
-                    console.log(`Initializing filter for tab: ${tabId}`);
-                    
-                    // Initialize filter module for this tab
-                    FilterToggleModule.init(tabId, containerId);
-                    
-                    // Try to find and register the DataTable instance
-                    findAndRegisterDataTable(tabId);
-                } catch (err) {
-                    console.error(`Error initializing filter for tab ${tabId}:`, err);
-                }
-            }
-            
-            // Function to find and register DataTable instance
-            function findAndRegisterDataTable(tabId) {
-                // Try different possible table IDs
-                const possibleTableIds = [
-                    `${tabId}-table`,
-                    `${tabId}Table`,
-                    `${tabId}_table`
-                ];
-                
-                // Try to find the table element
-                let tableEl = null;
-                
-                for (const tableId of possibleTableIds) {
-                    const el = document.getElementById(tableId);
-                    if (el) {
-                        tableEl = el;
-                        break;
-                    }
-                }
-                
-                // If still not found, try to find inside container
-                if (!tableEl) {
-                    const container = document.getElementById(`${tabId}-container`);
-                    if (container) {
-                        tableEl = container.querySelector('table');
-                    }
-                }
-                
-                // If still not found, try more general selector
-                if (!tableEl) {
-                    tableEl = document.querySelector(`.tab-pane#${tabId}-data table`);
-                }
-                
-                if (!tableEl) {
-                    console.log(`Table not found for tab ${tabId}, will try again when data is loaded`);
-                    
-                    // Try again after a delay in case table is being loaded asynchronously
-                    setTimeout(() => {
-                        const newTableEl = document.querySelector(`.tab-pane#${tabId}-data table`);
-                        if (newTableEl) {
-                            registerTableIfDataTable(tabId, newTableEl);
-                        }
-                    }, 2000);
-                    
-                    return;
-                }
-                
-                registerTableIfDataTable(tabId, tableEl);
-            }
-            
-            // Register a table if it's a DataTable
-            function registerTableIfDataTable(tabId, tableEl) {
-                if (tableEl && typeof $ !== 'undefined' && typeof $.fn.DataTable !== 'undefined') {
-                    // Check if it's already a DataTable
-                    try {
-                        const dt = $(tableEl).DataTable({retrieve: true});
-                        if (dt) {
-                            console.log(`Registered DataTable for tab ${tabId}`);
-                            FilterToggleModule.registerTable(tabId, dt);
-                        }
-                    } catch (err) {
-                        console.log(`Table for ${tabId} is not a DataTable or not yet initialized`);
-                    }
-                }
-            }
-        });
-    </script>
-
-    <!-- Before the end of the script section -->
-    <script>
-        // API route handler for GWScanner duplicate data
-        // This function will be used to handle the AJAX request for filtered data
-        $(document).ready(function() {
-            // Mock implementation of the GWScanner duplicate API endpoint
-            // In production, this would be handled server-side with a proper route
-            $.mockjax({
-                url: "/api/gwscanner-duplicate/data",
-                response: function(settings) {
-                    console.log("Received filter request:", settings.data);
-                    
-                    // Parse filter parameters
-                    const filters = settings.data || {};
-                    const filterValues = {};
-                    
-                    // Process filter values
-                    Object.keys(filters).forEach(key => {
-                        if (typeof filters[key] === 'string' && filters[key].includes(',')) {
-                            filterValues[key] = filters[key].split(',');
-                        } else {
-                            filterValues[key] = [filters[key]];
-                        }
-                    });
-                    
-                    console.log("Processed filters:", filterValues);
-                    
-                    // Generate sample data based on filters
-                    const sampleData = generateSampleData(filterValues);
-                    
-                    // Return response
-                    this.responseText = {
-                        success: true,
-                        data: sampleData
-                    };
-                },
-                responseTime: 1000 // Simulate server delay
-            });
-            
-            // Helper function to generate sample data based on filters
-            function generateSampleData(filters) {
-                const data = [];
-                const rowCount = Math.floor(Math.random() * 100) + 20; // 20-120 rows
-                
-                // Define possible values for each filter category
-                const possibleValues = {
-                    TOOcode: ['201', '202', '203', '204', '205'],
-                    Fromcode: ['DUPLICATE', 'MANUAL', 'AUTO'],
-                    FieldNo: ['1', '2', '3', '4', '5'],
-                    Jobcde: ['C0485', 'J0474', 'J0180']
-                };
-                
-                // Generate rows
-                for (let i = 0; i < rowCount; i++) {
-                    const row = [];
-                    
-                    // Add TOOcode
-                    const tooCode = getFilteredRandomValue('TOOcode', filters, possibleValues);
-                    row.push(tooCode);
-                    
-                    // Add Fromcode
-                    const fromCode = getFilteredRandomValue('Fromcode', filters, possibleValues);
-                    row.push(fromCode);
-                    
-                    // Add FieldNo
-                    const fieldNo = getFilteredRandomValue('FieldNo', filters, possibleValues);
-                    row.push(fieldNo);
-                    
-                    // Add Jobcde
-                    const jobCode = getFilteredRandomValue('Jobcde', filters, possibleValues);
-                    row.push(jobCode);
-                    
-                    // Add some random data for other columns
-                    row.push(new Date().toISOString().split('T')[0]); // Date
-                    row.push(new Date().toTimeString().split(' ')[0]); // Time
-                    row.push('Data_' + Math.floor(Math.random() * 1000)); // Random data
-                    row.push(Math.floor(Math.random() * 100).toString()); // Random number
-                    
-                    data.push(row);
-                }
-                
-                return data;
-            }
-            
-            // Helper function to get a random value that matches the filter
-            function getFilteredRandomValue(category, filters, possibleValues) {
-                // If there's a filter for this category, use only those values
-                if (filters[category] && filters[category].length > 0) {
-                    const filterValues = filters[category];
-                    const randomIndex = Math.floor(Math.random() * filterValues.length);
-                    return filterValues[randomIndex];
-                } 
-                // Otherwise use any possible value
-                else {
-                    const values = possibleValues[category];
-                    const randomIndex = Math.floor(Math.random() * values.length);
-                    return values[randomIndex];
-                }
-            }
-        });
-    </script>
+    <!-- Filter functionality has been removed -->
+    
     <!-- End of the added script -->
     
-    <!-- Fix for filter toggle function -->
+    <!-- Filter functionality has been removed -->
     <script>
-        // Diagnostic function for debugging filter issues
-        function diagnosticLog(message, data) {
-            console.log(`%c[FILTER DIAGNOSTIC] ${message}`, 'background:#f6c23e;color:#000', data || '');
-        }
-        
-        // Register the diagnostic function globally
-        window.diagnosticLog = diagnosticLog;
-        
-        // Initialize filter toggle manually
-        $(document).ready(function() {
-            diagnosticLog('Document ready, setting up filter toggle fix');
-            
-            // Register event for when tabs are shown
-            $('a[data-bs-toggle="pill"]').on('shown.bs.tab', function (e) {
-                const target = $(e.target).attr('data-bs-target');
-                diagnosticLog(`Tab changed to ${target}`);
-                
-                // If this is the gwscanner-duplicate tab
-                if (target && target.includes('gwscanner')) {
-                    setTimeout(function() {
-                        diagnosticLog('Setting up GWScanner duplicate filter');
-                        
-                        // Make sure the container exists
-                        const containerId = 'gwscanner-duplicate-filter-container';
-                        let container = document.getElementById(containerId);
-                        
-                        if (!container) {
-                            diagnosticLog('Creating filter container');
-                            // Create the container
-                            container = document.createElement('div');
-                            container.id = containerId;
-                            container.className = 'filter-container mb-3';
-                            
-                            // Find tab panel
-                            const tabPanel = document.querySelector('.tab-pane[id*="gwscanner-duplicate"], .tab-pane[id*="gwscanner"]');
-                            if (tabPanel) {
-                                // Insert at beginning of tab panel
-                                if (tabPanel.firstChild) {
-                                    tabPanel.insertBefore(container, tabPanel.firstChild);
-                                } else {
-                                    tabPanel.appendChild(container);
-                                }
-                            }
-                        }
-                        
-                        // Initialize or reinitialize the filter toggle
-                        if (window.FilterToggleModule) {
-                            diagnosticLog('Initializing FilterToggleModule');
-                            
-                            // Initialize with default filters for GWScanner duplicate
-                            const duplicateFilterConfig = [
-                                {
-                                    field: 'TOOcode',
-                                    values: ['201', '202', '203', '204', '205']
-                                },
-                                {
-                                    field: 'Fromcode',
-                                    values: ['DUPLICATE', 'MANUAL', 'AUTO'] 
-                                },
-                                {
-                                    field: 'FieldNo',
-                                    values: ['1', '2', '3', '4', '5']
-                                },
-                                {
-                                    field: 'Jobcde',
-                                    values: ['C0485', 'J0474', 'J0180']
-                                }
-                            ];
-                            
-                            // Initialize with the config
-                            window.FilterToggleModule.init('gwscanner-duplicate', containerId, duplicateFilterConfig);
-                            
-                            // Find and register tables
-                            setTimeout(function() {
-                                diagnosticLog('Finding and registering GWScanner tables');
-                                window.FilterToggleModule.findAndRegisterGWScannerTables('gwscanner-duplicate');
-                            }, 500);
-                        }
-                    }, 300);
-                }
-            });
-            
-            // Manually trigger filter initialization for the active tab
-            setTimeout(function() {
-                const activeTab = document.querySelector('.nav-pills .nav-link.active');
-                if (activeTab) {
-                    diagnosticLog('Triggering setup for active tab');
-                    $(activeTab).trigger('shown.bs.tab');
-                }
-            }, 1000);
-        });
-    </script>
-
-    <!-- Script untuk sinkronisasi scroll horizontal -->
-    <script>
-      $(document).ready(function() {
-        // Tambahkan event handler untuk sinkronisasi scroll horizontal pada semua tabel
-        $('.table-responsive').on('scroll', function() {
-          const tableId = $(this).find('table').attr('id');
-          if (tableId) {
-            const scrollLeft = $(this).scrollLeft();
-            $(`.table-responsive:has(#${tableId})`).scrollLeft(scrollLeft);
-          }
-        });
-      });
+    console.log('All filter functionality has been removed');
     </script>
 </body>
-</html> 
+</html>

@@ -1,0 +1,5 @@
+const { CHECKROLL_NOT_SYNC_GWSCANNER_TASKREG_QUERY } = require('./queries');
+
+module.exports = {
+    CHECKROLL_NOT_SYNC_GWSCANNER_TASKREG_QUERY
+}; 

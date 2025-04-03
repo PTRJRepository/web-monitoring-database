@@ -7,7 +7,8 @@ const {
     BPJS_QUERY, 
     DUPLICATE_GWSCANNER_QUERY, 
     FFBWORKER_QUERY,
-    NOT_SYNC_GWSCANNER_OVERTIME_QUERY
+    NOT_SYNC_GWSCANNER_OVERTIME_QUERY,
+    CHECKROLL_NOT_SYNC_GWSCANNER_TASKREG_QUERY
 } = require('./index');
 
 // Path untuk file data
@@ -230,12 +231,33 @@ async function getNotSyncGWScannerOvertimeData() {
     }
 }
 
+// Fungsi untuk mendapatkan data yang tidak sinkron antara GWScanner dan TaskReg
+async function getNotSyncGWScannerTaskregData() {
+    try {
+        console.log('Executing GWScanner-TaskReg not sync query...');
+        const data = await executeQuery(CHECKROLL_NOT_SYNC_GWSCANNER_TASKREG_QUERY);
+        console.log(`GWScanner-TaskReg not sync query completed. Found ${data.length} records.`);
+        
+        // Simpan hasil query ke file JSON untuk tampilan
+        saveQueryResultsToJson('gwscanner_taskreg', data);
+        
+        // Simpan data ke history
+        saveQueryHistory('gwscanner_taskreg', data);
+        
+        return data;
+    } catch (err) {
+        console.error('Error getting GWScanner-TaskReg not sync data:', err);
+        throw err;
+    }
+}
+
 module.exports = {
     getTunjanganBerasData,
     getBPJSData,
     getGWScannerData,
     getFFBWorkerData,
     getNotSyncGWScannerOvertimeData,
+    getNotSyncGWScannerTaskregData,
     saveQueryResultsToJson,
     saveQueryHistory,
     loadAllHistoryData,

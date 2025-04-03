@@ -910,8 +910,13 @@ async function checkBpjsData() {
 async function checkGwScannerData() {
     try {
         console.log('Executing GWScanner duplicate check query...');
+        
+        // Baca ulang file SQL setiap kali fungsi dipanggil
+        const gwScannerQueryPath = path.join(__dirname, 'query', 'Find_Duplicate_GWScanner.sql');
+        const freshGwScannerQuery = fs.readFileSync(gwScannerQueryPath, 'utf8');
+        
         const pool = await getPool();
-        const result = await pool.request().query(getGwScannerQuery);
+        const result = await pool.request().query(freshGwScannerQuery);
         
         console.log(`GWScanner query completed. Found ${result.recordset.length} duplicate records.`);
         
@@ -985,6 +990,7 @@ app.get('/', async (req, res) => {
         const gwscannerData = await checkAndRefreshData('gwscanner', checkGwScannerData, false, 30);
         const ffbworkerData = await checkAndRefreshData('ffbworker', checkFfbWorkerData, false, 30);
         const gwscannerOvertimeNotSyncData = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData, false, 30);
+        const gwscannerTaskregData = await checkAndRefreshData('gwscanner_taskreg', checkGWScannerTaskregData, false, 30);
         
         console.log('Rendering index page with data:');
         console.log(`- Tunjangan beras: ${tunjanganData ? tunjanganData.length : 0} records`);
@@ -992,6 +998,7 @@ app.get('/', async (req, res) => {
         console.log(`- GWScanner: ${gwscannerData ? gwscannerData.length : 0} records`);
         console.log(`- FFB Worker: ${ffbworkerData ? ffbworkerData.length : 0} records`);
         console.log(`- GWScanner-Overtime Not Sync: ${gwscannerOvertimeNotSyncData ? gwscannerOvertimeNotSyncData.length : 0} records`);
+        console.log(`- GWScanner-TaskReg Not Sync: ${gwscannerTaskregData ? gwscannerTaskregData.length : 0} records`);
         
         res.render('index', { 
             data: tunjanganData || [],
@@ -999,6 +1006,7 @@ app.get('/', async (req, res) => {
             gwscannerData: gwscannerData || [],
             ffbworkerData: ffbworkerData || [],
             gwscannerOvertimeNotSyncData: gwscannerOvertimeNotSyncData || [],
+            gwscannerTaskregData: gwscannerTaskregData || [],
             lastCheck: formatDateTime(monitoringState.lastCheck),
             lastEmail: formatDateTime(monitoringState.lastEmail),
             isActive: monitoringState.isActive,
@@ -1014,6 +1022,7 @@ app.get('/', async (req, res) => {
             gwscannerData: [],
             ffbworkerData: [],
             gwscannerOvertimeNotSyncData: [],
+            gwscannerTaskregData: [],
             lastCheck: 'Error',
             lastEmail: 'Error',
             isActive: false,
@@ -1086,6 +1095,15 @@ async function initializeData() {
             console.log('GWScanner-Overtime not sync data saved to temporary file');
         } else {
             console.log('Using existing gwscanner_overtime_not_sync data from temporary file');
+        }
+        
+        if (shouldRefreshData('gwscanner_taskreg')) {
+            console.log('Initializing gwscanner_taskreg data...');
+            const gwscannerTaskregData = await checkGWScannerTaskregData();
+            saveTempData('gwscanner_taskreg', gwscannerTaskregData);
+            console.log('GWScanner-TaskReg not sync data saved to temporary file');
+        } else {
+            console.log('Using existing gwscanner_taskreg data from temporary file');
         }
         
         // Set flag bahwa data sudah diinisialisasi
@@ -1200,6 +1218,12 @@ async function checkDataAndNotify() {
             saveTempData('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
         }
         
+        if (shouldRefreshData('gwscanner_taskreg')) {
+            console.log('Refreshing gwscanner_taskreg data (older than 1 hour)...');
+            const gwscannerTaskregData = await checkGWScannerTaskregData();
+            saveTempData('gwscanner_taskreg', gwscannerTaskregData);
+        }
+        
         // Set flag bahwa data sudah diinisialisasi
         dataInitialized = true;
         
@@ -1214,13 +1238,15 @@ async function checkDataAndNotify() {
         const gwscannerData = loadTempData('gwscanner');
         const ffbworkerData = loadTempData('ffbworker');
         const gwscannerOvertimeNotSyncData = loadTempData('gwscanner_overtime_not_sync');
+        const gwscannerTaskregData = loadTempData('gwscanner_taskreg');
         
         return {
             tunjanganData: tunjanganData ? tunjanganData.data : [],
             bpjsData: bpjsData ? bpjsData.data : [],
             gwscannerData: gwscannerData ? gwscannerData.data : [],
             ffbworkerData: ffbworkerData ? ffbworkerData.data : [],
-            gwscannerOvertimeNotSyncData: gwscannerOvertimeNotSyncData ? gwscannerOvertimeNotSyncData.data : []
+            gwscannerOvertimeNotSyncData: gwscannerOvertimeNotSyncData ? gwscannerOvertimeNotSyncData.data : [],
+            gwscannerTaskregData: gwscannerTaskregData ? gwscannerTaskregData.data : []
         };
     } catch (error) {
         console.error('Error checking data:', error);
@@ -1247,7 +1273,8 @@ function loadAllHistoryData() {
             bpjs: [],
             gwscanner: [],
             ffbworker: [],
-            gwscanner_overtime_not_sync: []
+            gwscanner_overtime_not_sync: [],
+            gwscanner_taskreg: []
         };
         
         if (fs.existsSync(historyDir)) {
@@ -1671,6 +1698,23 @@ async function checkGWScannerOvertimeSyncData() {
     }
 }
 
+// Fungsi untuk mengecek data GWScanner-TaskReg
+async function checkGWScannerTaskregData() {
+    try {
+        console.log('Executing GWScanner-TaskReg not sync query...');
+        const data = await dataModule.getNotSyncGWScannerTaskregData();
+        console.log(`GWScanner-TaskReg not sync query completed. Found ${data.length} records.`);
+        
+        // Update waktu pemeriksaan terakhir
+        monitoringState.lastCheck = new Date();
+        
+        return data;
+    } catch (err) {
+        console.error('Error checking GWScanner-TaskReg not sync data:', err);
+        throw err;
+    }
+}
+
 // Tambahkan endpoint untuk mendapatkan konfigurasi
 app.get('/api/config', (req, res) => {
     try {
@@ -1724,6 +1768,30 @@ app.post('/api/config', (req, res) => {
     } catch (error) {
         console.error('Error updating configuration:', error);
         res.status(500).json({ success: false, error: 'Failed to update configuration' });
+    }
+});
+
+// Endpoint untuk refresh data GWScanner
+app.get('/api/refresh/gwscanner', async (req, res) => {
+    try {
+        console.log('Manual refresh of GWScanner data requested');
+        const gwscannerData = await checkGwScannerData();
+        console.log(`GWScanner data refreshed. Found ${gwscannerData.length} records.`);
+        
+        monitoringState.lastCheck = new Date();
+        
+        res.json({
+            success: true,
+            message: 'Data GWScanner berhasil diperbarui',
+            count: gwscannerData.length,
+            lastUpdated: formatDateTime(monitoringState.lastCheck)
+        });
+    } catch (error) {
+        console.error('Error refreshing GWScanner data:', error);
+        res.status(500).json({
+            success: false,
+            error: `Gagal memperbarui data GWScanner: ${error.message}`
+        });
     }
 });
 

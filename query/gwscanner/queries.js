@@ -16,7 +16,8 @@ WITH DuplicateTransactions AS (
     FROM 
         [db_ptrj].[dbo].[GWScanner_Transaction]
     WHERE 
-        TRANSDATE >= DATEADD(day, -7, GETDATE())  -- Last 7 days
+        TRANSDATE >= DATEFROMPARTS(YEAR(GETDATE()), 3, 1)  -- Dari awal bulan Maret
+        AND TRANSDATE <= GETDATE()  -- Sampai sekarang
 )
 SELECT 
     *
@@ -52,7 +53,8 @@ WITH WorkerTransactions AS (
         [db_ptrj].[dbo].[GWScanner_Transaction] t
         LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e ON t.WORKERCODE = e.EmpCode
     WHERE 
-        t.TRANSDATE >= DATEADD(day, -7, GETDATE())  -- Last 7 days
+        t.TRANSDATE >= DATEFROMPARTS(YEAR(GETDATE()), 3, 1)  -- Dari awal bulan Maret
+        AND t.TRANSDATE <= GETDATE()  -- Sampai sekarang
         AND e.PosCode NOT IN ('HAR')  -- Exclude harvester positions
 )
 SELECT 

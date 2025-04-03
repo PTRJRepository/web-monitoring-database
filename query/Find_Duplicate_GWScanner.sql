@@ -4,8 +4,8 @@ WITH DuplikatTransNoN AS (
     FROM 
         [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata]
     WHERE 
-        TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0) -- Awal bulan ini
-        AND TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0) -- Awal bulan depan
+        TRANSDATE >= DATEFROMPARTS(YEAR(GETDATE()), 3, 1) -- Awal bulan Maret
+        AND TRANSDATE <= GETDATE() -- Sampai hari ini
         AND TRANSSTATUS = 'OK'
     GROUP BY 
         TRANSNO
@@ -35,8 +35,8 @@ FROM
 INNER JOIN DuplikatTransNoN d ON g.TRANSNO = d.TRANSNO
 WHERE 
     g.TRANSSTATUS = 'OK'
-    AND g.TRANSDATE >= DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0)
-    AND g.TRANSDATE < DATEADD(month, DATEDIFF(month, 0, GETDATE()) + 1, 0)
+    AND g.TRANSDATE >= DATEFROMPARTS(YEAR(GETDATE()), 3, 1) -- Awal bulan Maret
+    AND g.TRANSDATE <= GETDATE() -- Sampai hari ini
 ORDER BY 
     g.TRANSNO,
     g.ID

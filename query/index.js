@@ -2,6 +2,7 @@ const { TUNJANGAN_BERAS_QUERY, TUNJANGAN_BERAS_QUERY_ORIGINAL } = require('./tun
 const { BPJS_QUERY } = require('./bpjs/queries');
 const { DUPLICATE_GWSCANNER_QUERY, FFBWORKER_QUERY } = require('./gwscanner/queries');
 const { NOT_SYNC_GWSCANNER_OVERTIME_QUERY } = require('./gwscanner-overtime/queries');
+const { CHECKROLL_NOT_SYNC_GWSCANNER_TASKREG_QUERY } = require('./gwscanner-taskreg/queries');
 
 module.exports = {
     TUNJANGAN_BERAS_QUERY,
@@ -9,5 +10,6 @@ module.exports = {
     BPJS_QUERY,
     DUPLICATE_GWSCANNER_QUERY,
     FFBWORKER_QUERY,
-    NOT_SYNC_GWSCANNER_OVERTIME_QUERY
+    NOT_SYNC_GWSCANNER_OVERTIME_QUERY,
+    CHECKROLL_NOT_SYNC_GWSCANNER_TASKREG_QUERY
 }; 

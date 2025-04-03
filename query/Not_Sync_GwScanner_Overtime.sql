@@ -1,8 +1,7 @@
 -- Parameter bulan dan tahun yang bisa diubah (default: bulan dan tahun saat ini)
-DECLARE @TargetMonth INT = MONTH(GETDATE()); -- Bulan saat ini
 DECLARE @TargetYear INT = YEAR(GETDATE());   -- Tahun saat ini
-DECLARE @StartDate DATE = DATEFROMPARTS(@TargetYear, @TargetMonth, 1);
-DECLARE @EndDate DATE = EOMONTH(@StartDate);
+DECLARE @StartDate DATE = DATEFROMPARTS(@TargetYear, 3, 1); -- Awal bulan Maret
+DECLARE @EndDate DATE = GETDATE(); -- Sampai hari ini
 
 -- CTE untuk mengidentifikasi karyawan dengan status OK dan CANCELLATION pada hari yang sama
 WITH EmployeeWithBothStatuses AS (
