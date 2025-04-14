@@ -594,10 +594,10 @@
     <div class="loading-overlay" id="loadingOverlay">
         <div class="loading-spinner"></div>
         <div class="loading-text">
-            <div id="loadingText">Menghubungkan ke Database...</div>
+            <div id="loadingText"><i class="fas fa-database me-2"></i>Mengambil data langsung dari database...</div>
             <div class="loading-details">
-                <p><i class="fas fa-database me-2"></i>Database: <span id="loadingDbType">Temp Database (Local JSON)</span></p>
-                <p><i class="fas fa-table me-2"></i>Tabel: <span id="loadingTable">Local JSON Files</span></p>
+                <p><i class="fas fa-sync-alt me-2"></i>Status: <span id="loadingStatus">Menjalankan query ke database</span></p>
+                <p><i class="fas fa-clock me-2"></i>Waktu: <span id="loadingTime">Sedang diproses...</span></p>
             </div>
             <div id="connectionError" class="alert alert-danger mt-3" style="display: none;">
                 <strong><i class="fas fa-exclamation-triangle me-2"></i>Error Koneksi:</strong>

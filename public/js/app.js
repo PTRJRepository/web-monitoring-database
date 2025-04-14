@@ -130,8 +130,8 @@ function setupAutoRefresh(minutes) {
  * Refresh semua data
  */
 function refreshAllData() {
-    // Tampilkan loading
-    showLoading();
+    // Tampilkan loading dengan pesan yang lebih jelas
+    showLoading('Menjalankan query langsung ke database untuk semua data...');
     
     // Tambahkan parameter forceRefresh=true untuk menjalankan query langsung ke database
     fetch('/api/refresh-data?type=all&forceRefresh=true')
@@ -139,7 +139,7 @@ function refreshAllData() {
         .then(result => {
             if (result.success) {
                 // Tampilkan notifikasi sukses
-                createToast('success', 'Sukses', 'Semua data berhasil diperbarui');
+                createToast('success', 'Sukses', 'Semua data berhasil diperbarui langsung dari database');
                 
                 // Update waktu terakhir diperbarui
                 updateLastUpdated(result.timestamp);
@@ -147,19 +147,19 @@ function refreshAllData() {
                 // Refresh halaman untuk memuat data terbaru
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 1500);
                 
                 // Sembunyikan loading
                 hideLoading();
             } else {
                 console.error('Error refreshing all data:', result.error || 'Unknown error');
-                createToast('error', 'Error', 'Gagal memperbarui data');
+                createToast('error', 'Error', 'Gagal memperbarui data dari database');
                 hideLoading();
             }
         })
         .catch(error => {
             console.error('Error refreshing all data:', error);
-            createToast('error', 'Error', 'Gagal memperbarui data');
+            createToast('error', 'Error', 'Gagal memperbarui data dari database');
             hideLoading();
         });
 }
@@ -185,11 +185,43 @@ function updateLastUpdated(timestamp) {
 }
 
 /**
- * Tampilkan loading overlay
+ * Tampilkan loading overlay dengan pesan custom
  */
-function showLoading() {
+function showLoading(message = 'Mengambil data langsung dari database...') {
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) {
+        // Tambahkan pesan yang lebih informatif
+        const loadingText = loadingOverlay.querySelector('.loading-text');
+        if (loadingText) {
+            const loadingTextElement = loadingOverlay.querySelector('#loadingText');
+            if (loadingTextElement) {
+                loadingTextElement.innerHTML = `<i class="fas fa-database me-2"></i>${message}`;
+            }
+            
+            // Update status
+            const loadingStatusElement = loadingOverlay.querySelector('#loadingStatus');
+            if (loadingStatusElement) {
+                loadingStatusElement.textContent = 'Menjalankan query langsung ke database';
+            }
+            
+            // Update waktu
+            const loadingTimeElement = loadingOverlay.querySelector('#loadingTime');
+            if (loadingTimeElement) {
+                const now = new Date();
+                loadingTimeElement.textContent = now.toLocaleTimeString('id-ID');
+                
+                // Update waktu setiap detik
+                if (window.loadingTimeInterval) {
+                    clearInterval(window.loadingTimeInterval);
+                }
+                window.loadingTimeInterval = setInterval(() => {
+                    const currentTime = new Date();
+                    loadingTimeElement.textContent = currentTime.toLocaleTimeString('id-ID');
+                }, 1000);
+            }
+        }
+        
+        // Tampilkan overlay
         loadingOverlay.style.display = 'flex';
     }
 }
@@ -201,6 +233,12 @@ function hideLoading() {
     const loadingOverlay = document.getElementById('loadingOverlay');
     if (loadingOverlay) {
         loadingOverlay.style.display = 'none';
+        
+        // Hentikan interval update waktu
+        if (window.loadingTimeInterval) {
+            clearInterval(window.loadingTimeInterval);
+            window.loadingTimeInterval = null;
+        }
     }
 }
 
@@ -460,8 +498,11 @@ function refreshData() {
         return;
     }
     
-    // Tampilkan indikator loading
-    showLoading();
+    // Tampilkan indikator loading dengan pesan yang lebih jelas
+    showLoading('Mengambil data terbaru langsung dari database...');
+    
+    // Tampilkan toast bahwa data sedang diambil dari database
+    showToast("Menjalankan query langsung ke database...", "info");
     
     // Panggil API dengan parameter forceRefresh=true untuk memastikan query langsung ke database
     fetch('/api/refresh-data?type=all&forceRefresh=true')
@@ -469,12 +510,12 @@ function refreshData() {
         .then(result => {
             if (result.success) {
                 console.log("Data berhasil diperbarui dari database");
-                showToast("Data berhasil diperbarui dari database", "success");
+                showToast("Data berhasil diperbarui langsung dari database", "success");
                 
                 // Refresh halaman untuk menampilkan data terbaru
                 setTimeout(() => {
                     window.location.reload();
-                }, 1000);
+                }, 1500);
             } else {
                 console.error("Error memperbarui data:", result.error);
                 showToast("Error memperbarui data: " + result.error, "error");
