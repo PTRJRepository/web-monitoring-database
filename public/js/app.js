@@ -133,8 +133,8 @@ function refreshAllData() {
     // Tampilkan loading
     showLoading();
     
-    // Panggil API untuk refresh semua data
-    fetch('/api/refresh-data?type=all')
+    // Tambahkan parameter forceRefresh=true untuk menjalankan query langsung ke database
+    fetch('/api/refresh-data?type=all&forceRefresh=true')
         .then(response => response.json())
         .then(result => {
             if (result.success) {
@@ -144,15 +144,10 @@ function refreshAllData() {
                 // Update waktu terakhir diperbarui
                 updateLastUpdated(result.timestamp);
                 
-                // Update statistik
-                if (window.StatsModule) {
-                    StatsModule.updateAllStats();
-                }
-                
-                // Refresh data GWScanner-Overtime
-                if (window.GWScannerOvertimeModule) {
-                    GWScannerOvertimeModule.refreshData();
-                }
+                // Refresh halaman untuk memuat data terbaru
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
                 
                 // Sembunyikan loading
                 hideLoading();
@@ -465,49 +460,32 @@ function refreshData() {
         return;
     }
     
-    const lastCheckElem = document.getElementById('lastCheckTime');
-    if (lastCheckElem) {
-        lastCheckElem.textContent = new Date().toLocaleString('id-ID');
-    }
+    // Tampilkan indikator loading
+    showLoading();
     
-    // Trigger reload if LoadAndDisplayAllTempData exists
-    if (typeof window.loadAndDisplayAllTempData === 'function') {
-        // Tampilkan indikator loading ringan
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.id = 'refresh-indicator';
-        loadingIndicator.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Refresh data...';
-        loadingIndicator.style.position = 'fixed';
-        loadingIndicator.style.bottom = '20px';
-        loadingIndicator.style.right = '80px';
-        loadingIndicator.style.background = 'rgba(25, 135, 84, 0.9)';
-        loadingIndicator.style.color = 'white';
-        loadingIndicator.style.padding = '8px 15px';
-        loadingIndicator.style.borderRadius = '5px';
-        loadingIndicator.style.zIndex = '9998';
-        document.body.appendChild(loadingIndicator);
-        
-        window.loadAndDisplayAllTempData()
-            .then(() => {
-                console.log("Data refreshed successfully");
-                // Hapus indikator loading
-                if (document.getElementById('refresh-indicator')) {
-                    document.getElementById('refresh-indicator').remove();
-                }
-                showToast("Data refreshed successfully", "success");
-                window.dataPreloaded = true;
-            })
-            .catch(error => {
-                console.error("Error refreshing data:", error);
-                // Hapus indikator loading
-                if (document.getElementById('refresh-indicator')) {
-                    document.getElementById('refresh-indicator').remove();
-                }
-                showToast("Error refreshing data: " + error.message, "error");
-            });
-    } else {
-        console.log("loadAndDisplayAllTempData function not found");
-        showToast("Refresh function not found", "error");
-    }
+    // Panggil API dengan parameter forceRefresh=true untuk memastikan query langsung ke database
+    fetch('/api/refresh-data?type=all&forceRefresh=true')
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                console.log("Data berhasil diperbarui dari database");
+                showToast("Data berhasil diperbarui dari database", "success");
+                
+                // Refresh halaman untuk menampilkan data terbaru
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                console.error("Error memperbarui data:", result.error);
+                showToast("Error memperbarui data: " + result.error, "error");
+            }
+            hideLoading();
+        })
+        .catch(error => {
+            console.error("Error memperbarui data:", error);
+            showToast("Error memperbarui data: " + error.message, "error");
+            hideLoading();
+        });
 }
 
 // Helper function to show a toast notification

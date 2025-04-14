@@ -14,14 +14,11 @@ const dataModule = require('./query/dataOperations');
 
 // Definisi path untuk direktori data
 const dataDir = path.join(__dirname, 'public/data');
-const tempDir = path.join(__dirname, 'temp');
 
 // Pastikan direktori ada
-[dataDir, tempDir].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-    }
-});
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+}
 
 // Load configuration
 let appConfig;
@@ -136,54 +133,6 @@ let dataInitialized = false;
 // Variabel global untuk periode pembukuan
 let taxMonthData = null;
 
-// Fungsi untuk menyimpan data ke temporary file
-function saveTempData(type, data) {
-    try {
-        // Pastikan direktori temp ada
-        if (!fs.existsSync(tempDir)) {
-            fs.mkdirSync(tempDir, { recursive: true });
-        }
-        
-        const tempFile = path.join(tempDir, `${type}_temp.json`);
-        const tempData = {
-            timestamp: new Date().toISOString(),
-            data: data
-        };
-        
-        fs.writeFileSync(tempFile, JSON.stringify(tempData, null, 2));
-        return true;
-    } catch (err) {
-        console.error(`Error saving temporary data for ${type}:`, err);
-        return false;
-    }
-}
-
-// Fungsi untuk membaca data dari temporary file
-function loadTempData(type) {
-    try {
-        const tempFile = path.join(tempDir, `${type}_temp.json`);
-        if (fs.existsSync(tempFile)) {
-            // Baca file tanpa log berlebihan
-            const fileContent = fs.readFileSync(tempFile, 'utf8');
-            const data = JSON.parse(fileContent);
-            
-            // Pastikan data memiliki struktur yang benar
-            if (!data.data) {
-                console.warn(`Temporary data for ${type} has invalid structure, missing data property`);
-                return null;
-            }
-            
-            return data;
-        }
-        
-        console.log(`No temporary data found for ${type}`);
-        return null;
-    } catch (err) {
-        console.error(`Error loading temporary data for ${type}:`, err);
-        return null;
-    }
-}
-
 // Fungsi untuk memeriksa status data
 function checkDataStatus() {
     try {
@@ -194,8 +143,8 @@ function checkDataStatus() {
         };
 
         dataTypes.forEach(type => {
-            const tempFile = path.join(tempDir, `${type}_temp.json`);
-            status.dataStatus[type] = fs.existsSync(tempFile);
+            const dataFile = path.join(dataDir, `${type}_results.json`);
+            status.dataStatus[type] = fs.existsSync(dataFile);
             if (!status.dataStatus[type]) {
                 status.allDataReady = false;
             }
@@ -206,7 +155,7 @@ function checkDataStatus() {
         console.error('Error checking data status:', error);
         return {
             allDataReady: false,
-            error: error.message
+            dataStatus: {}
         };
     }
 }
@@ -368,29 +317,20 @@ function saveQueryResultsToJson(queryType, data) {
     }
 }
 
-// Function to get query results from JSON files
+// Fungsi untuk mendapatkan hasil query dari file JSON
 function getQueryResultsFromJson(queryType) {
-    const filePath = path.join(__dirname, 'public', 'data', `${queryType}_results.json`);
-    
     try {
+        const filePath = path.join(dataDir, `${queryType}_results.json`);
         if (fs.existsSync(filePath)) {
             const fileContent = fs.readFileSync(filePath, 'utf8');
-            return JSON.parse(fileContent);
-        } else {
-            console.log(`Results file for ${queryType} not found`);
-            return {
-                lastUpdated: null,
-                count: 0,
-                data: []
-            };
+            const data = JSON.parse(fileContent);
+            return data; // sekarang berisi {lastUpdated, data}
         }
+        console.log(`No query results found for ${queryType}`);
+        return null;
     } catch (err) {
-        console.error(`Error reading query results from JSON: ${err.message}`);
-        return {
-            lastUpdated: null,
-            count: 0,
-            data: []
-        };
+        console.error(`Error getting query results for ${queryType} from JSON:`, err);
+        return null;
     }
 }
 
@@ -497,44 +437,25 @@ app.get('/config', authMiddleware, (req, res) => {
 });
 
 // Fungsi untuk memeriksa dan memperbarui data jika perlu
-async function checkAndRefreshData(type, refreshFunction, forceRefresh = false, refreshInterval = 5) {
-    const tempData = loadTempData(type);
-    
-    // Jika tidak ada data atau data sudah lebih dari interval yang ditentukan, perbarui data
-    if (!tempData || !tempData.timestamp || forceRefresh) {
-        console.log(`No data found for ${type} or force refresh requested, fetching from database...`);
-        const newData = await refreshFunction();
-        saveTempData(type, newData);
-        return newData;
+async function getDirectData(refreshFunction) {
+    try {
+        console.log(`Fetching data directly from database...`);
+        return await refreshFunction();
+    } catch (err) {
+        console.error('Error fetching data directly from database:', err);
+        return [];
     }
-    
-    // Periksa timestamp data
-    const lastUpdate = new Date(tempData.timestamp);
-    const now = new Date();
-    const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
-    
-    // Jika data sudah lebih dari interval yang ditentukan, perbarui data
-    if (diffMinutes > refreshInterval) {
-        console.log(`Data for ${type} is older than ${refreshInterval} minutes (${Math.round(diffMinutes)} minutes old), refreshing from database...`);
-        const newData = await refreshFunction();
-        saveTempData(type, newData);
-        return newData;
-    }
-    
-    // Gunakan data yang sudah ada
-    console.log(`Using cached data for ${type} (${Math.round(diffMinutes)} minutes old)`);
-    return tempData.data;
 }
 
 // Tambahkan endpoint untuk mendapatkan data
 app.get('/api/data', async (req, res) => {
     try {
         // Load data dengan pemeriksaan timestamp
-        const tunjanganData = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData);
-        const bpjsData = await checkAndRefreshData('bpjs', checkBpjsData);
-        const gwscannerData = await checkAndRefreshData('gwscanner', checkGwScannerData);
-        const ffbworkerData = await checkAndRefreshData('ffbworker', checkFfbWorkerData);
-        const gwscannerOvertimeNotSyncData = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData);
+        const tunjanganData = await getDirectData(checkTunjanganBerasData);
+        const bpjsData = await getDirectData(checkBpjsData);
+        const gwscannerData = await getDirectData(checkGwScannerData);
+        const ffbworkerData = await getDirectData(checkFfbWorkerData);
+        const gwscannerOvertimeNotSyncData = await getDirectData(checkGWScannerOvertimeSyncData);
         
         console.log('API data request with data:');
         console.log(`- Tunjangan beras: ${tunjanganData ? tunjanganData.length : 0} records`);
@@ -569,32 +490,36 @@ app.get('/api/data', async (req, res) => {
 app.get('/api/refresh-data', async (req, res) => {
     try {
         const dataType = req.query.type;
+        // Parameter forceRefresh selalu diabaikan karena kita selalu mengambil data langsung dari database
         let recordCount = 0;
         
         console.log(`Refreshing data for type: ${dataType}`);
         
         if (dataType === 'tunjangan_beras') {
-            const data = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData, true);
+            const data = await getDirectData(checkTunjanganBerasData);
             recordCount = data.length;
         } else if (dataType === 'bpjs') {
-            const data = await checkAndRefreshData('bpjs', checkBpjsData, true);
+            const data = await getDirectData(checkBpjsData);
             recordCount = data.length;
         } else if (dataType === 'gwscanner') {
-            const data = await checkAndRefreshData('gwscanner', checkGwScannerData, true);
+            const data = await getDirectData(checkGwScannerData);
             recordCount = data.length;
         } else if (dataType === 'ffbworker') {
-            const data = await checkAndRefreshData('ffbworker', checkFfbWorkerData, true);
+            const data = await getDirectData(checkFfbWorkerData);
             recordCount = data.length;
         } else if (dataType === 'gwscanner_overtime_not_sync') {
-            const data = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData, true);
+            const data = await getDirectData(checkGWScannerOvertimeSyncData);
             recordCount = data.length;
         } else if (dataType === 'all') {
             // Refresh semua data
-            const tunjanganData = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData, true);
-            const bpjsData = await checkAndRefreshData('bpjs', checkBpjsData, true);
-            const gwscannerData = await checkAndRefreshData('gwscanner', checkGwScannerData, true);
-            const ffbworkerData = await checkAndRefreshData('ffbworker', checkFfbWorkerData, true);
-            const gwscannerOvertimeNotSyncData = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData, true);
+            const tunjanganData = await getDirectData(checkTunjanganBerasData);
+            const bpjsData = await getDirectData(checkBpjsData);
+            const gwscannerData = await getDirectData(checkGwScannerData);
+            const ffbworkerData = await getDirectData(checkFfbWorkerData);
+            const gwscannerOvertimeNotSyncData = await getDirectData(checkGWScannerOvertimeSyncData);
+            
+            // Juga refresh data tax month
+            await initTaxMonthData();
             
             recordCount = {
                 tunjangan_beras: tunjanganData.length,
@@ -618,8 +543,9 @@ app.get('/api/refresh-data', async (req, res) => {
         
         res.json({
             success: true,
-            message: `Data ${dataType} berhasil diperbarui`,
-            recordCount: recordCount
+            message: `Data ${dataType} berhasil diperbarui langsung dari database`,
+            recordCount: recordCount,
+            timestamp: formatDateTime(new Date())
         });
     } catch (error) {
         console.error('Error refreshing data:', error);
@@ -844,9 +770,6 @@ async function checkTunjanganBerasData() {
         // Simpan hasil query ke file JSON untuk tampilan
         saveQueryResultsToJson('tunjangan_beras', processedResults);
         
-        // Simpan ke temporary file
-        saveTempData('tunjangan_beras', processedResults);
-        
         return processedResults;
     } catch (err) {
         console.error('Error checking tunjangan beras data:', err);
@@ -861,13 +784,6 @@ async function checkTunjanganBerasData() {
                 }
             }
             pool = null;
-        }
-        
-        // Jika terjadi error, gunakan data dari file temporary jika ada
-        const tempData = loadTempData('tunjangan_beras');
-        if (tempData && tempData.data.length > 0) {
-            console.log(`Using temporary data for tunjangan_beras (${tempData.data.length} records)`);
-            return tempData.data;
         }
         
         throw err;
@@ -891,19 +807,9 @@ async function checkBpjsData() {
         // Simpan hasil query ke file JSON untuk tampilan
         saveQueryResultsToJson('bpjs', result.recordset);
         
-        // Simpan ke temporary file
-        saveTempData('bpjs', result.recordset);
-        
         return result.recordset;
     } catch (err) {
         console.error('Error checking BPJS data:', err);
-        
-        // Jika terjadi error, gunakan data dari file temporary jika ada
-        const tempData = loadTempData('bpjs');
-        if (tempData && tempData.data.length > 0) {
-            console.log(`Using temporary data for bpjs (${tempData.data.length} records)`);
-            return tempData.data;
-        }
         
         throw err;
     }
@@ -931,19 +837,9 @@ async function checkGwScannerData() {
         // Simpan hasil query ke file JSON untuk tampilan
         saveQueryResultsToJson('gwscanner', result.recordset);
         
-        // Simpan ke temporary file
-        saveTempData('gwscanner', result.recordset);
-        
         return result.recordset;
     } catch (err) {
         console.error('Error checking GWScanner data:', err);
-        
-        // Jika terjadi error, gunakan data dari file temporary jika ada
-        const tempData = loadTempData('gwscanner');
-        if (tempData && tempData.data.length > 0) {
-            console.log(`Using temporary data for gwscanner (${tempData.data.length} records)`);
-            return tempData.data;
-        }
         
         throw err;
     }
@@ -966,19 +862,9 @@ async function checkFfbWorkerData() {
         // Simpan hasil query ke file JSON untuk tampilan
         saveQueryResultsToJson('ffbworker', result.recordset);
         
-        // Simpan ke temporary file
-        saveTempData('ffbworker', result.recordset);
-        
         return result.recordset;
     } catch (err) {
         console.error('Error checking FFB Worker data:', err);
-        
-        // Jika terjadi error, gunakan data dari file temporary jika ada
-        const tempData = loadTempData('ffbworker');
-        if (tempData && tempData.data.length > 0) {
-            console.log(`Using temporary data for ffbworker (${tempData.data.length} records)`);
-            return tempData.data;
-        }
         
         throw err;
     }
@@ -987,6 +873,7 @@ async function checkFfbWorkerData() {
 // Fungsi untuk mendapatkan data periode pembukuan dan menyimpannya sebagai variabel global
 async function initTaxMonthData() {
     try {
+        console.log('Initializing tax month data directly from database...');
         taxMonthData = await dataModule.getTaxMonth();
         console.log('Tax month data initialized:', taxMonthData);
         return taxMonthData;
@@ -1022,12 +909,12 @@ async function initializeData() {
     
     // Periksa apakah data perlu diperbarui berdasarkan timestamp
     const shouldRefreshData = (type) => {
-        const tempData = loadTempData(type);
-        if (!tempData || !tempData.timestamp) {
+        const tempData = getQueryResultsFromJson(type);
+        if (!tempData || !tempData.lastUpdated) {
             return true;
         }
         
-        const lastUpdate = new Date(tempData.timestamp);
+        const lastUpdate = new Date(tempData.lastUpdated);
         const now = new Date();
         const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
         
@@ -1038,7 +925,7 @@ async function initializeData() {
     if (shouldRefreshData('tunjangan_beras')) {
         console.log('Initializing tunjangan_beras data...');
         const tunjanganData = await checkTunjanganBerasData();
-        saveTempData('tunjangan_beras', tunjanganData);
+        saveQueryResultsToJson('tunjangan_beras', tunjanganData);
         console.log('Tunjangan beras data saved to temporary file');
     } else {
         console.log('Using existing tunjangan_beras data from temporary file');
@@ -1047,7 +934,7 @@ async function initializeData() {
     if (shouldRefreshData('bpjs')) {
         console.log('Initializing bpjs data...');
         const bpjsData = await checkBpjsData();
-        saveTempData('bpjs', bpjsData);
+        saveQueryResultsToJson('bpjs', bpjsData);
         console.log('BPJS data saved to temporary file');
     } else {
         console.log('Using existing bpjs data from temporary file');
@@ -1056,7 +943,7 @@ async function initializeData() {
     if (shouldRefreshData('gwscanner')) {
         console.log('Initializing gwscanner data...');
         const gwscannerData = await checkGwScannerData();
-        saveTempData('gwscanner', gwscannerData);
+        saveQueryResultsToJson('gwscanner', gwscannerData);
         console.log('GWScanner data saved to temporary file');
     } else {
         console.log('Using existing gwscanner data from temporary file');
@@ -1065,7 +952,7 @@ async function initializeData() {
     if (shouldRefreshData('ffbworker')) {
         console.log('Initializing ffbworker data...');
         const ffbworkerData = await checkFfbWorkerData();
-        saveTempData('ffbworker', ffbworkerData);
+        saveQueryResultsToJson('ffbworker', ffbworkerData);
         console.log('FFB Worker data saved to temporary file');
     } else {
         console.log('Using existing ffbworker data from temporary file');
@@ -1074,7 +961,7 @@ async function initializeData() {
     if (shouldRefreshData('gwscanner_overtime_not_sync')) {
         console.log('Initializing gwscanner_overtime_not_sync data...');
         const gwscannerOvertimeNotSyncData = await checkGWScannerOvertimeSyncData();
-        saveTempData('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
+        saveQueryResultsToJson('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
         console.log('GWScanner-Overtime not sync data saved to temporary file');
     } else {
         console.log('Using existing gwscanner_overtime_not_sync data from temporary file');
@@ -1083,7 +970,7 @@ async function initializeData() {
     if (shouldRefreshData('gwscanner_taskreg')) {
         console.log('Initializing gwscanner_taskreg data...');
         const gwscannerTaskregData = await checkGWScannerTaskregData();
-        saveTempData('gwscanner_taskreg', gwscannerTaskregData);
+        saveQueryResultsToJson('gwscanner_taskreg', gwscannerTaskregData);
         console.log('GWScanner-TaskReg not sync data saved to temporary file');
     } else {
         console.log('Using existing gwscanner_taskreg data from temporary file');
@@ -1154,12 +1041,12 @@ async function checkDataAndNotify() {
         
         // Periksa apakah data perlu diperbarui berdasarkan timestamp
         const shouldRefreshData = (type) => {
-            const tempData = loadTempData(type);
-            if (!tempData || !tempData.timestamp) {
+            const tempData = getQueryResultsFromJson(type);
+            if (!tempData || !tempData.lastUpdated) {
                 return true;
             }
             
-            const lastUpdate = new Date(tempData.timestamp);
+            const lastUpdate = new Date(tempData.lastUpdated);
             const now = new Date();
             const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
             
@@ -1170,37 +1057,37 @@ async function checkDataAndNotify() {
         if (shouldRefreshData('tunjangan_beras')) {
             console.log('Refreshing tunjangan_beras data (older than 1 hour)...');
             const tunjanganData = await checkTunjanganBerasData();
-            saveTempData('tunjangan_beras', tunjanganData);
+            saveQueryResultsToJson('tunjangan_beras', tunjanganData);
         }
         
         if (shouldRefreshData('bpjs')) {
             console.log('Refreshing bpjs data (older than 1 hour)...');
             const bpjsData = await checkBpjsData();
-            saveTempData('bpjs', bpjsData);
+            saveQueryResultsToJson('bpjs', bpjsData);
         }
         
         if (shouldRefreshData('gwscanner')) {
             console.log('Refreshing gwscanner data (older than 1 hour)...');
             const gwscannerData = await checkGwScannerData();
-            saveTempData('gwscanner', gwscannerData);
+            saveQueryResultsToJson('gwscanner', gwscannerData);
         }
         
         if (shouldRefreshData('ffbworker')) {
             console.log('Refreshing ffbworker data (older than 1 hour)...');
             const ffbworkerData = await checkFfbWorkerData();
-            saveTempData('ffbworker', ffbworkerData);
+            saveQueryResultsToJson('ffbworker', ffbworkerData);
         }
         
         if (shouldRefreshData('gwscanner_overtime_not_sync')) {
             console.log('Refreshing gwscanner_overtime_not_sync data (older than 1 hour)...');
             const gwscannerOvertimeNotSyncData = await checkGWScannerOvertimeSyncData();
-            saveTempData('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
+            saveQueryResultsToJson('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
         }
         
         if (shouldRefreshData('gwscanner_taskreg')) {
             console.log('Refreshing gwscanner_taskreg data (older than 1 hour)...');
             const gwscannerTaskregData = await checkGWScannerTaskregData();
-            saveTempData('gwscanner_taskreg', gwscannerTaskregData);
+            saveQueryResultsToJson('gwscanner_taskreg', gwscannerTaskregData);
         }
         
         // Set flag bahwa data sudah diinisialisasi
@@ -1212,12 +1099,12 @@ async function checkDataAndNotify() {
         console.log('All queries completed successfully');
         
         // Load data dari temporary file untuk notifikasi
-        const tunjanganData = loadTempData('tunjangan_beras');
-        const bpjsData = loadTempData('bpjs');
-        const gwscannerData = loadTempData('gwscanner');
-        const ffbworkerData = loadTempData('ffbworker');
-        const gwscannerOvertimeNotSyncData = loadTempData('gwscanner_overtime_not_sync');
-        const gwscannerTaskregData = loadTempData('gwscanner_taskreg');
+        const tunjanganData = getQueryResultsFromJson('tunjangan_beras');
+        const bpjsData = getQueryResultsFromJson('bpjs');
+        const gwscannerData = getQueryResultsFromJson('gwscanner');
+        const ffbworkerData = getQueryResultsFromJson('ffbworker');
+        const gwscannerOvertimeNotSyncData = getQueryResultsFromJson('gwscanner_overtime_not_sync');
+        const gwscannerTaskregData = getQueryResultsFromJson('gwscanner_taskreg');
         
         return {
             tunjanganData: tunjanganData ? tunjanganData.data : [],
@@ -1530,10 +1417,10 @@ app.post('/api/send-current-data', authMiddleware, async (req, res) => {
         }
         
         // Load data dari temporary file
-        const tunjanganData = loadTempData('tunjangan_beras');
-        const bpjsData = loadTempData('bpjs');
-        const gwscannerData = loadTempData('gwscanner');
-        const ffbworkerData = loadTempData('ffbworker');
+        const tunjanganData = getQueryResultsFromJson('tunjangan_beras');
+        const bpjsData = getQueryResultsFromJson('bpjs');
+        const gwscannerData = getQueryResultsFromJson('gwscanner');
+        const ffbworkerData = getQueryResultsFromJson('ffbworker');
         
         // Buat transporter
         const transporter = nodemailer.createTransport({

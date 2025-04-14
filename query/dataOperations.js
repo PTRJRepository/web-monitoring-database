@@ -27,7 +27,11 @@ const getTaxMonthQuery = getQueryFromFile(path.join(__dirname, 'GetTaxMonth.sql'
 function saveQueryResultsToJson(dataType, data) {
     try {
         const filePath = path.join(dataDir, `${dataType}_results.json`);
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+        const jsonData = {
+            lastUpdated: new Date().toISOString(),
+            data: data
+        };
+        fs.writeFileSync(filePath, JSON.stringify(jsonData, null, 2));
         console.log(`Saved query results to ${filePath} for display`);
     } catch (err) {
         console.error(`Error saving ${dataType} results to JSON:`, err);
@@ -255,23 +259,17 @@ async function getNotSyncGWScannerTaskregData() {
 // Fungsi untuk mendapatkan data periode pajak/pembukuan
 async function getTaxMonth() {
     try {
+        console.log('Executing getTaxMonth query directly from database...');
         const data = await executeQuery(getTaxMonthQuery);
         
         if (data && data.length > 0) {
-            // Simpan hasil query ke file JSON untuk penggunaan global
+            // Simpan hasil query ke file JSON untuk penggunaan global tapi tidak digunakan sebagai cache
             saveQueryResultsToJson('tax_month', data[0]);
             return data[0];
         }
         
-        // Jika tidak ada data, cek apakah ada data tersimpan
-        const savedData = getSavedTaxMonthData();
-        if (savedData) {
-            console.log('Using saved tax month data');
-            return savedData;
-        }
-        
-        // Jika tidak ada data tersimpan, gunakan data dari GetTaxMonth.sql
-        console.log('Creating fallback tax month data');
+        // Jika tidak ada data, gunakan fallback sederhana tanpa caching
+        console.log('No tax month data found, using fallback data');
         const fallbackData = {
             NextAccMonth: 1,
             CalendarMonth: 4,
@@ -281,21 +279,12 @@ async function getTaxMonth() {
             LastProcessDate: new Date()
         };
         
-        // Simpan fallback data untuk penggunaan berikutnya
-        saveQueryResultsToJson('tax_month', fallbackData);
         return fallbackData;
     } catch (err) {
         console.error('Error getting tax month data:', err);
         
-        // Jika terjadi error, cek apakah ada data tersimpan
-        const savedData = getSavedTaxMonthData();
-        if (savedData) {
-            console.log('Using saved tax month data after error');
-            return savedData;
-        }
-        
-        // Jika tidak ada data tersimpan, gunakan data fallback
-        console.log('Using fallback tax month data');
+        // Jika terjadi error, gunakan fallback data sederhana
+        console.log('Error occurred, using fallback tax month data');
         const fallbackData = {
             NextAccMonth: 1,
             CalendarMonth: 4,
@@ -305,24 +294,7 @@ async function getTaxMonth() {
             LastProcessDate: new Date()
         };
         
-        // Simpan fallback data untuk penggunaan berikutnya
-        saveQueryResultsToJson('tax_month', fallbackData);
         return fallbackData;
-    }
-}
-
-// Fungsi helper untuk mendapatkan data tax month yang tersimpan
-function getSavedTaxMonthData() {
-    try {
-        const filePath = path.join(dataDir, 'tax_month_results.json');
-        if (fs.existsSync(filePath)) {
-            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-            return data.data || null;
-        }
-        return null;
-    } catch (err) {
-        console.error('Error reading saved tax month data:', err);
-        return null;
     }
 }
 
@@ -338,6 +310,5 @@ module.exports = {
     loadAllHistoryData,
     loadHistoryDataByFileName,
     compareData,
-    getTaxMonth,
-    getSavedTaxMonthData
+    getTaxMonth
 }; 
