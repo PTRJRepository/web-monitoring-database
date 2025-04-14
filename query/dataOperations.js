@@ -11,9 +11,10 @@ const {
     CHECKROLL_NOT_SYNC_GWSCANNER_TASKREG_QUERY
 } = require('./index');
 
-// Path untuk file data
+// Path untuk file data dan query
 const dataDir = path.join(__dirname, '../public/data');
 const historyDir = path.join(__dirname, '../history');
+const getTaxMonthQuery = getQueryFromFile(path.join(__dirname, 'GetTaxMonth.sql'));
 
 // Pastikan direktori ada
 [dataDir, historyDir].forEach(dir => {
@@ -251,16 +252,92 @@ async function getNotSyncGWScannerTaskregData() {
     }
 }
 
+// Fungsi untuk mendapatkan data periode pajak/pembukuan
+async function getTaxMonth() {
+    try {
+        const data = await executeQuery(getTaxMonthQuery);
+        
+        if (data && data.length > 0) {
+            // Simpan hasil query ke file JSON untuk penggunaan global
+            saveQueryResultsToJson('tax_month', data[0]);
+            return data[0];
+        }
+        
+        // Jika tidak ada data, cek apakah ada data tersimpan
+        const savedData = getSavedTaxMonthData();
+        if (savedData) {
+            console.log('Using saved tax month data');
+            return savedData;
+        }
+        
+        // Jika tidak ada data tersimpan, gunakan data dari GetTaxMonth.sql
+        console.log('Creating fallback tax month data');
+        const fallbackData = {
+            NextAccMonth: 1,
+            CalendarMonth: 4,
+            ProcessMonthName: 'April',
+            ProcessYear: new Date().getFullYear(),
+            ProcessDate: new Date(`${new Date().getFullYear()}-04-01`),
+            LastProcessDate: new Date()
+        };
+        
+        // Simpan fallback data untuk penggunaan berikutnya
+        saveQueryResultsToJson('tax_month', fallbackData);
+        return fallbackData;
+    } catch (err) {
+        console.error('Error getting tax month data:', err);
+        
+        // Jika terjadi error, cek apakah ada data tersimpan
+        const savedData = getSavedTaxMonthData();
+        if (savedData) {
+            console.log('Using saved tax month data after error');
+            return savedData;
+        }
+        
+        // Jika tidak ada data tersimpan, gunakan data fallback
+        console.log('Using fallback tax month data');
+        const fallbackData = {
+            NextAccMonth: 1,
+            CalendarMonth: 4,
+            ProcessMonthName: 'April',
+            ProcessYear: new Date().getFullYear(),
+            ProcessDate: new Date(`${new Date().getFullYear()}-04-01`),
+            LastProcessDate: new Date()
+        };
+        
+        // Simpan fallback data untuk penggunaan berikutnya
+        saveQueryResultsToJson('tax_month', fallbackData);
+        return fallbackData;
+    }
+}
+
+// Fungsi helper untuk mendapatkan data tax month yang tersimpan
+function getSavedTaxMonthData() {
+    try {
+        const filePath = path.join(dataDir, 'tax_month_results.json');
+        if (fs.existsSync(filePath)) {
+            const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+            return data.data || null;
+        }
+        return null;
+    } catch (err) {
+        console.error('Error reading saved tax month data:', err);
+        return null;
+    }
+}
+
 module.exports = {
+    saveQueryResultsToJson,
+    saveQueryHistory,
     getTunjanganBerasData,
     getBPJSData,
     getGWScannerData,
     getFFBWorkerData,
     getNotSyncGWScannerOvertimeData,
     getNotSyncGWScannerTaskregData,
-    saveQueryResultsToJson,
-    saveQueryHistory,
     loadAllHistoryData,
     loadHistoryDataByFileName,
-    compareData
+    compareData,
+    getTaxMonth,
+    getSavedTaxMonthData
 }; 

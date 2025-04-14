@@ -560,6 +560,26 @@
         }
         
         /* Semua style untuk tombol pagination telah dihapus */
+        
+        .period-info {
+            background-color: #4e73df;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .period-info h4 {
+            margin: 0;
+            font-weight: 600;
+        }
+        
+        .period-info p {
+            margin: 5px 0 0;
+            font-size: 0.95rem;
+        }
     </style>
 
     <!-- CSS untuk filter telah dihapus -->
@@ -611,6 +631,20 @@
                                 <span class="text-muted">Terakhir diperbarui: <span id="lastUpdated">-</span></span>
                             </div>
                         </div>
+                        
+                        <% if (typeof taxMonthData !== 'undefined' && taxMonthData) { %>
+                        <div class="period-info mt-3">
+                            <h4>Periode Pembukuan: <%= taxMonthData.ProcessMonthName %> <%= taxMonthData.ProcessYear %></h4>
+                            <p>Periode Akuntansi: <%= taxMonthData.NextAccMonth %> | Bulan Kalender: <%= taxMonthData.CalendarMonth %> | Tahun: <%= taxMonthData.ProcessYear %></p>
+                            <p>Tanggal Proses: <%= taxMonthData.ProcessDate ? new Date(taxMonthData.ProcessDate).toLocaleDateString('id-ID') : '-' %> | 
+                            Terakhir Diproses: <%= taxMonthData.LastProcessDate ? new Date(taxMonthData.LastProcessDate).toLocaleDateString('id-ID') : '-' %></p>
+                        </div>
+                        <% } else { %>
+                        <div class="period-info mt-3 bg-warning">
+                            <h4>Data Periode Pembukuan Tidak Tersedia</h4>
+                            <p>Terjadi masalah saat mengambil data dari database. Silakan periksa koneksi database.</p>
+                        </div>
+                        <% } %>
                     </div>
                 </div>
             </div>

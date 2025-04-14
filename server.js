@@ -133,6 +133,9 @@ app.use(express.static('public'));
 // Tambahkan variabel untuk menandai kesiapan data
 let dataInitialized = false;
 
+// Variabel global untuk periode pembukuan
+let taxMonthData = null;
+
 // Fungsi untuk menyimpan data ke temporary file
 function saveTempData(type, data) {
     try {
@@ -981,144 +984,120 @@ async function checkFfbWorkerData() {
     }
 }
 
-// Modifikasi route utama untuk menggunakan data dari temporary file
-app.get('/', async (req, res) => {
+// Fungsi untuk mendapatkan data periode pembukuan dan menyimpannya sebagai variabel global
+async function initTaxMonthData() {
     try {
-        // Load data dengan pemeriksaan timestamp (interval 30 menit untuk halaman utama)
-        const tunjanganData = await checkAndRefreshData('tunjangan_beras', checkTunjanganBerasData, false, 30);
-        const bpjsData = await checkAndRefreshData('bpjs', checkBpjsData, false, 30);
-        const gwscannerData = await checkAndRefreshData('gwscanner', checkGwScannerData, false, 30);
-        const ffbworkerData = await checkAndRefreshData('ffbworker', checkFfbWorkerData, false, 30);
-        const gwscannerOvertimeNotSyncData = await checkAndRefreshData('gwscanner_overtime_not_sync', checkGWScannerOvertimeSyncData, false, 30);
-        const gwscannerTaskregData = await checkAndRefreshData('gwscanner_taskreg', checkGWScannerTaskregData, false, 30);
-        
-        console.log('Rendering index page with data:');
-        console.log(`- Tunjangan beras: ${tunjanganData ? tunjanganData.length : 0} records`);
-        console.log(`- BPJS: ${bpjsData ? bpjsData.length : 0} records`);
-        console.log(`- GWScanner: ${gwscannerData ? gwscannerData.length : 0} records`);
-        console.log(`- FFB Worker: ${ffbworkerData ? ffbworkerData.length : 0} records`);
-        console.log(`- GWScanner-Overtime Not Sync: ${gwscannerOvertimeNotSyncData ? gwscannerOvertimeNotSyncData.length : 0} records`);
-        console.log(`- GWScanner-TaskReg Not Sync: ${gwscannerTaskregData ? gwscannerTaskregData.length : 0} records`);
-        
-        res.render('index', { 
-            data: tunjanganData || [],
-            bpjsData: bpjsData || [],
-            gwscannerData: gwscannerData || [],
-            ffbworkerData: ffbworkerData || [],
-            gwscannerOvertimeNotSyncData: gwscannerOvertimeNotSyncData || [],
-            gwscannerTaskregData: gwscannerTaskregData || [],
-            lastCheck: formatDateTime(monitoringState.lastCheck),
-            lastEmail: formatDateTime(monitoringState.lastEmail),
-            isActive: monitoringState.isActive,
-            dataReady: dataInitialized,
-            emailConfig
-        });
-    } catch (error) {
-        console.error('Error rendering index page:', error);
-        res.status(500).render('index', { 
-            error: 'Terjadi kesalahan saat memuat data. Silakan coba lagi nanti.',
-            data: [],
-            bpjsData: [],
-            gwscannerData: [],
-            ffbworkerData: [],
-            gwscannerOvertimeNotSyncData: [],
-            gwscannerTaskregData: [],
-            lastCheck: 'Error',
-            lastEmail: 'Error',
-            isActive: false,
-            dataReady: false,
-            emailConfig
-        });
+        taxMonthData = await dataModule.getTaxMonth();
+        console.log('Tax month data initialized:', taxMonthData);
+        return taxMonthData;
+    } catch (err) {
+        console.error('Error initializing tax month data:', err);
+        return null;
     }
+}
+
+// Modifikasi route utama untuk mengirim data periode pembukuan ke tampilan
+app.get('/', authMiddleware, async (req, res) => {
+    // Periksa status data
+    const status = checkDataStatus();
+    
+    // Ambil data histori
+    const historyData = loadAllHistoryData();
+    
+    res.render('index', { 
+        dataStatus: status.dataStatus, 
+        allDataReady: status.allDataReady,
+        historyData: historyData,
+        taxMonthData: taxMonthData,
+        lastCheck: formatDateTime(new Date())
+    });
 });
 
 // Fungsi untuk inisialisasi data
 async function initializeData() {
-    try {
-        console.log('Initializing data...');
-        
-        // Periksa apakah data perlu diperbarui berdasarkan timestamp
-        const shouldRefreshData = (type) => {
-            const tempData = loadTempData(type);
-            if (!tempData || !tempData.timestamp) {
-                return true;
-            }
-            
-            const lastUpdate = new Date(tempData.timestamp);
-            const now = new Date();
-            const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
-            
-            return diffMinutes > 60; // Perbarui data jika sudah lebih dari 60 menit (1 jam)
-        };
-        
-        // Jalankan semua query jika diperlukan
-        if (shouldRefreshData('tunjangan_beras')) {
-            console.log('Initializing tunjangan_beras data...');
-            const tunjanganData = await checkTunjanganBerasData();
-            saveTempData('tunjangan_beras', tunjanganData);
-            console.log('Tunjangan beras data saved to temporary file');
-        } else {
-            console.log('Using existing tunjangan_beras data from temporary file');
+    console.log('Initializing data...');
+    
+    // Pertama, inisialisasi data periode pembukuan
+    await initTaxMonthData();
+    
+    // Periksa apakah data perlu diperbarui berdasarkan timestamp
+    const shouldRefreshData = (type) => {
+        const tempData = loadTempData(type);
+        if (!tempData || !tempData.timestamp) {
+            return true;
         }
         
-        if (shouldRefreshData('bpjs')) {
-            console.log('Initializing bpjs data...');
-            const bpjsData = await checkBpjsData();
-            saveTempData('bpjs', bpjsData);
-            console.log('BPJS data saved to temporary file');
-        } else {
-            console.log('Using existing bpjs data from temporary file');
-        }
+        const lastUpdate = new Date(tempData.timestamp);
+        const now = new Date();
+        const diffMinutes = (now - lastUpdate) / (1000 * 60); // Perbedaan dalam menit
         
-        if (shouldRefreshData('gwscanner')) {
-            console.log('Initializing gwscanner data...');
-            const gwscannerData = await checkGwScannerData();
-            saveTempData('gwscanner', gwscannerData);
-            console.log('GWScanner data saved to temporary file');
-        } else {
-            console.log('Using existing gwscanner data from temporary file');
-        }
-        
-        if (shouldRefreshData('ffbworker')) {
-            console.log('Initializing ffbworker data...');
-            const ffbworkerData = await checkFfbWorkerData();
-            saveTempData('ffbworker', ffbworkerData);
-            console.log('FFB Worker data saved to temporary file');
-        } else {
-            console.log('Using existing ffbworker data from temporary file');
-        }
-        
-        if (shouldRefreshData('gwscanner_overtime_not_sync')) {
-            console.log('Initializing gwscanner_overtime_not_sync data...');
-            const gwscannerOvertimeNotSyncData = await checkGWScannerOvertimeSyncData();
-            saveTempData('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
-            console.log('GWScanner-Overtime not sync data saved to temporary file');
-        } else {
-            console.log('Using existing gwscanner_overtime_not_sync data from temporary file');
-        }
-        
-        if (shouldRefreshData('gwscanner_taskreg')) {
-            console.log('Initializing gwscanner_taskreg data...');
-            const gwscannerTaskregData = await checkGWScannerTaskregData();
-            saveTempData('gwscanner_taskreg', gwscannerTaskregData);
-            console.log('GWScanner-TaskReg not sync data saved to temporary file');
-        } else {
-            console.log('Using existing gwscanner_taskreg data from temporary file');
-        }
-        
-        // Set flag bahwa data sudah diinisialisasi
-        dataInitialized = true;
-        
-        // Update waktu pemeriksaan terakhir
-        monitoringState.lastCheck = new Date();
-        
-        console.log('All data initialized and ready to serve requests');
-        
-        return true;
-    } catch (error) {
-        console.error('Error initializing data:', error);
-        return false;
+        return diffMinutes > 60; // Perbarui data jika sudah lebih dari 60 menit (1 jam)
+    };
+    
+    // Jalankan semua query jika diperlukan
+    if (shouldRefreshData('tunjangan_beras')) {
+        console.log('Initializing tunjangan_beras data...');
+        const tunjanganData = await checkTunjanganBerasData();
+        saveTempData('tunjangan_beras', tunjanganData);
+        console.log('Tunjangan beras data saved to temporary file');
+    } else {
+        console.log('Using existing tunjangan_beras data from temporary file');
     }
+    
+    if (shouldRefreshData('bpjs')) {
+        console.log('Initializing bpjs data...');
+        const bpjsData = await checkBpjsData();
+        saveTempData('bpjs', bpjsData);
+        console.log('BPJS data saved to temporary file');
+    } else {
+        console.log('Using existing bpjs data from temporary file');
+    }
+    
+    if (shouldRefreshData('gwscanner')) {
+        console.log('Initializing gwscanner data...');
+        const gwscannerData = await checkGwScannerData();
+        saveTempData('gwscanner', gwscannerData);
+        console.log('GWScanner data saved to temporary file');
+    } else {
+        console.log('Using existing gwscanner data from temporary file');
+    }
+    
+    if (shouldRefreshData('ffbworker')) {
+        console.log('Initializing ffbworker data...');
+        const ffbworkerData = await checkFfbWorkerData();
+        saveTempData('ffbworker', ffbworkerData);
+        console.log('FFB Worker data saved to temporary file');
+    } else {
+        console.log('Using existing ffbworker data from temporary file');
+    }
+    
+    if (shouldRefreshData('gwscanner_overtime_not_sync')) {
+        console.log('Initializing gwscanner_overtime_not_sync data...');
+        const gwscannerOvertimeNotSyncData = await checkGWScannerOvertimeSyncData();
+        saveTempData('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
+        console.log('GWScanner-Overtime not sync data saved to temporary file');
+    } else {
+        console.log('Using existing gwscanner_overtime_not_sync data from temporary file');
+    }
+    
+    if (shouldRefreshData('gwscanner_taskreg')) {
+        console.log('Initializing gwscanner_taskreg data...');
+        const gwscannerTaskregData = await checkGWScannerTaskregData();
+        saveTempData('gwscanner_taskreg', gwscannerTaskregData);
+        console.log('GWScanner-TaskReg not sync data saved to temporary file');
+    } else {
+        console.log('Using existing gwscanner_taskreg data from temporary file');
+    }
+    
+    // Set flag bahwa data sudah diinisialisasi
+    dataInitialized = true;
+    
+    // Update waktu pemeriksaan terakhir
+    monitoringState.lastCheck = new Date();
+    
+    console.log('All data initialized and ready to serve requests');
+    
+    return true;
 }
 
 // Modifikasi fungsi updateSchedule untuk mengubah interval menjadi 1 jam
@@ -1808,6 +1787,14 @@ app.get('/temp/:filename', (req, res) => {
   } else {
     res.status(404).json({ error: `File ${filename} tidak ditemukan` });
   }
+});
+
+// Tambahkan route untuk mendapatkan data periode pembukuan
+app.get('/api/tax-month-data', (req, res) => {
+    res.json({
+        success: true,
+        data: taxMonthData || {}
+    });
 });
 
 // Panggil fungsi startServer

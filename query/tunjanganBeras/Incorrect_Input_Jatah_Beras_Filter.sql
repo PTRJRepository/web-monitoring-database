@@ -9,6 +9,7 @@ WITH FamilyCTE AS (
         f1.DOB,
         f1.CeaseRiceInd,
         f1.WorkInd,
+        f1.Gender,
         DATEDIFF(YEAR, f1.DOB, DATEFROMPARTS(@CurrentYear, 1, 1)) AS Usia,
         CASE 
             WHEN f1.Relationship = 1 THEN 1  -- Pasangan selalu RN = 1
@@ -31,6 +32,7 @@ ValidationCTE AS (
         f.DOB,
         f.CeaseRiceInd,
         f.WorkInd,
+        f.Gender,
         f.Usia,
         f.RN AS AdjustedRN,
         CASE 
@@ -38,6 +40,7 @@ ValidationCTE AS (
             ELSE 'Bukan'
         END AS IsEmployee,
         CASE 
+            WHEN f.Relationship = 1 AND f.Gender = (SELECT Gender FROM [db_ptrj].[dbo].[HR_EMPLOYEE] WHERE EmpCode = f.EmpCode) THEN 'Salah - Gender pasangan sama dengan karyawan'
             WHEN f.Relationship = 1 AND f.WorkInd = 1 AND f.CeaseRiceInd = 2 THEN 'Salah - Pasangan yang bekerja seharusnya tidak menerima tunjangan'
             WHEN f.Relationship = 2 AND f.RN IN (2, 3) AND f.Usia > 21 AND f.CeaseRiceInd = 2 THEN 'Salah - Usia > 21 tahun seharusnya tidak menerima tunjangan'
             WHEN f.Relationship = 2 AND f.RN IN (2, 3) AND f.Usia <= 21 AND f.CeaseRiceInd = 1 THEN 'Salah - Usia <= 21 tahun seharusnya menerima tunjangan'
@@ -65,6 +68,19 @@ MainQuery AS (
         f.EmpCode,
         e.EmpName,
         e.Gender,
+        CASE e.Gender
+            WHEN 1 THEN 'Laki-laki'
+            WHEN 2 THEN 'Perempuan'
+            ELSE 'Tidak Diketahui'
+        END AS Gender_Karyawan,
+        MAX(CASE WHEN f.Relationship = 1 THEN f.Gender END) AS Gender_Pasangan_Kode,
+        MAX(CASE WHEN f.Relationship = 1 THEN 
+            CASE f.Gender
+                WHEN 1 THEN 'Laki-laki'
+                WHEN 2 THEN 'Perempuan'
+                ELSE 'Tidak Diketahui'
+            END 
+        END) AS Gender_Pasangan,
         CASE e.MaritalStatus
             WHEN 2 THEN 'Menikah'
             WHEN 1 THEN 'Single'
@@ -280,7 +296,14 @@ SELECT *
 FROM MainQuery
 WHERE 
     ((Status_Validasi1 = 'Salah' OR Status_Validasi2 = 'Salah' OR Status_Validasi3 = 'Salah' OR Status_Validasi4 = 'Salah' OR Status_Validasi5 = 'Salah')
-    OR (Perbandingan_RiceRation = 'Beda' AND Selisih_RiceRation > 0))
+    OR (Perbandingan_RiceRation = 'Beda' AND Selisih_RiceRation > 0)
+    OR EXISTS (
+        SELECT 1 
+        FROM ValidationCTE v 
+        WHERE v.EmpCode = MainQuery.EmpCode 
+        AND v.Relationship = 1 
+        AND v.Gender = (SELECT Gender FROM [db_ptrj].[dbo].[HR_EMPLOYEE] WHERE EmpCode = v.EmpCode)
+    ))
     AND RiceRation_Aktual < 7000
     AND EXISTS (
         SELECT 1 
