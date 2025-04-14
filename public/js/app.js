@@ -28,6 +28,20 @@ document.addEventListener("DOMContentLoaded", function() {
     // Setup auto refresh data dengan jitter
     setupAutoRefreshData();
     
+    // Check database status
+    checkDatabaseStatus();
+    
+    // Setup interval untuk memeriksa status database setiap 60 detik
+    setInterval(checkDatabaseStatus, 60000);
+    
+    // Add event listener for refresh button
+    const refreshDBStatusBtn = document.getElementById('refresh-db-status');
+    if (refreshDBStatusBtn) {
+        refreshDBStatusBtn.addEventListener('click', function() {
+            checkDatabaseStatus();
+        });
+    }
+    
     // Add event listener for GWScanner refresh button
     const refreshGWScannerBtn = document.getElementById('refreshGWScannerBtn');
     if (refreshGWScannerBtn) {
@@ -201,7 +215,30 @@ function showLoading(message = 'Mengambil data langsung dari database...') {
             // Update status
             const loadingStatusElement = loadingOverlay.querySelector('#loadingStatus');
             if (loadingStatusElement) {
-                loadingStatusElement.textContent = 'Menjalankan query langsung ke database';
+                // Periksa status koneksi database
+                fetch('/api/database-status')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.connected) {
+                            loadingStatusElement.textContent = 'Menjalankan query langsung ke database';
+                        } else {
+                            loadingStatusElement.textContent = 'Menggunakan mode fallback (tidak terhubung ke database)';
+                            
+                            // Tambahkan pesan peringatan
+                            const connectionError = loadingOverlay.querySelector('#connectionError');
+                            if (connectionError) {
+                                connectionError.style.display = 'block';
+                                const errorMessage = connectionError.querySelector('#errorMessage');
+                                if (errorMessage) {
+                                    errorMessage.textContent = data.status;
+                                }
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        loadingStatusElement.textContent = 'Error memeriksa status database';
+                        console.error('Error checking database status during loading:', error);
+                    });
             }
             
             // Update waktu
@@ -599,5 +636,40 @@ function refreshGWScannerData() {
             console.error('Error refreshing GWScanner data:', error);
             createToast('error', 'Error', 'Gagal memperbarui data GWScanner');
             hideLoading();
+        });
+}
+
+// Fungsi untuk memeriksa dan menampilkan status database
+function checkDatabaseStatus() {
+    // Get the db-status-indicator element
+    const statusEl = document.getElementById('db-status-indicator');
+    if (!statusEl) return;
+    
+    // Show loading status
+    statusEl.className = 'badge bg-secondary text-white shadow-sm py-2 px-3';
+    statusEl.innerHTML = '<i class="fas fa-sync fa-spin"></i> Memeriksa koneksi...';
+    
+    // Fetch the database status
+    fetch('/api/database-status')
+        .then(response => response.json())
+        .then(data => {
+            if (data.connected) {
+                statusEl.className = 'badge bg-success text-white shadow-sm py-2 px-3';
+                statusEl.innerHTML = '<i class="fas fa-check-circle"></i> Database terhubung';
+            } else {
+                statusEl.className = 'badge bg-warning text-dark shadow-sm py-2 px-3';
+                statusEl.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${data.status}`;
+                
+                // Tampilkan toast notification
+                showToast("Aplikasi berjalan dalam mode fallback. Beberapa data mungkin tidak tersedia.", "warning");
+            }
+        })
+        .catch(error => {
+            statusEl.className = 'badge bg-danger text-white shadow-sm py-2 px-3';
+            statusEl.innerHTML = '<i class="fas fa-times-circle"></i> Error koneksi';
+            console.error('Error checking database status:', error);
+            
+            // Tampilkan toast notification dengan error detail
+            showToast("Gagal memeriksa status database: " + error.message, "error");
         });
 } 

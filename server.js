@@ -1667,5 +1667,41 @@ app.get('/api/tax-month-data', (req, res) => {
     });
 });
 
+// Endpoint untuk memeriksa status koneksi database
+app.get('/api/database-status', async (req, res) => {
+    try {
+        // Mencoba melakukan koneksi ke database
+        const dbModule = require('./query/dbConnection');
+        const pool = await dbModule.getPool();
+        
+        // Cek apakah pool adalah object mock yang dibuat saat fallback
+        const isMockPool = !pool.DRIVERS;
+        
+        if (isMockPool) {
+            res.json({
+                connected: false,
+                mode: 'fallback',
+                status: 'Tidak dapat terhubung ke database. Menggunakan mode fallback.',
+                timestamp: new Date().toISOString()
+            });
+        } else {
+            res.json({
+                connected: true,
+                mode: 'database',
+                status: 'Terhubung ke database.',
+                timestamp: new Date().toISOString()
+            });
+        }
+    } catch (error) {
+        console.error('Error checking database status:', error);
+        res.status(500).json({
+            connected: false,
+            mode: 'error',
+            status: 'Error saat memeriksa koneksi database: ' + error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
 // Panggil fungsi startServer
 startServer();
