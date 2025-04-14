@@ -535,21 +535,43 @@ app.get('/api/refresh-data', async (req, res) => {
             console.error('Error resetting database module connection:', closeErr);
         }
         
+        // Pastikan direktori history ada
+        if (!fs.existsSync(path.join(__dirname, 'history'))) {
+            fs.mkdirSync(path.join(__dirname, 'history'), { recursive: true });
+            console.log('Created missing history directory');
+        }
+        
+        let data = [];
         if (dataType === 'tunjangan_beras') {
-            const data = await getDirectData(checkTunjanganBerasData);
+            data = await getDirectData(checkTunjanganBerasData);
             recordCount = data.length;
+            // Update history
+            saveQueryHistory('tunjangan_beras', data);
         } else if (dataType === 'bpjs') {
-            const data = await getDirectData(checkBpjsData);
+            data = await getDirectData(checkBpjsData);
             recordCount = data.length;
+            // Update history
+            saveQueryHistory('bpjs', data);
         } else if (dataType === 'gwscanner') {
-            const data = await getDirectData(checkGwScannerData);
+            data = await getDirectData(checkGwScannerData);
             recordCount = data.length;
+            // Update history
+            saveQueryHistory('gwscanner', data);
         } else if (dataType === 'ffbworker') {
-            const data = await getDirectData(checkFfbWorkerData);
+            data = await getDirectData(checkFfbWorkerData);
             recordCount = data.length;
+            // Update history
+            saveQueryHistory('ffbworker', data);
         } else if (dataType === 'gwscanner_overtime_not_sync') {
-            const data = await getDirectData(checkGWScannerOvertimeSyncData);
+            data = await getDirectData(checkGWScannerOvertimeSyncData);
             recordCount = data.length;
+            // Update history
+            saveQueryHistory('gwscanner_overtime_not_sync', data);
+        } else if (dataType === 'gwscanner_taskreg') {
+            data = await getDirectData(checkGWScannerTaskregData);
+            recordCount = data.length;
+            // Update history
+            saveQueryHistory('gwscanner_taskreg', data);
         } else if (dataType === 'all') {
             // Refresh semua data
             const tunjanganData = await getDirectData(checkTunjanganBerasData);
@@ -557,6 +579,15 @@ app.get('/api/refresh-data', async (req, res) => {
             const gwscannerData = await getDirectData(checkGwScannerData);
             const ffbworkerData = await getDirectData(checkFfbWorkerData);
             const gwscannerOvertimeNotSyncData = await getDirectData(checkGWScannerOvertimeSyncData);
+            const gwscannerTaskregData = await getDirectData(checkGWScannerTaskregData);
+            
+            // Update history untuk semua jenis data
+            saveQueryHistory('tunjangan_beras', tunjanganData);
+            saveQueryHistory('bpjs', bpjsData);
+            saveQueryHistory('gwscanner', gwscannerData);
+            saveQueryHistory('ffbworker', ffbworkerData);
+            saveQueryHistory('gwscanner_overtime_not_sync', gwscannerOvertimeNotSyncData);
+            saveQueryHistory('gwscanner_taskreg', gwscannerTaskregData);
             
             // Juga refresh data tax month
             await initTaxMonthData();
@@ -566,7 +597,8 @@ app.get('/api/refresh-data', async (req, res) => {
                 bpjs: bpjsData.length,
                 gwscanner: gwscannerData.length,
                 ffbworker: ffbworkerData.length,
-                gwscanner_overtime_not_sync: gwscannerOvertimeNotSyncData.length
+                gwscanner_overtime_not_sync: gwscannerOvertimeNotSyncData.length,
+                gwscanner_taskreg: gwscannerTaskregData.length
             };
             
             // Update waktu pemeriksaan terakhir
@@ -591,7 +623,7 @@ app.get('/api/refresh-data', async (req, res) => {
         console.error('Error refreshing data:', error);
         res.status(500).json({
             success: false,
-            error: 'Gagal memperbarui data'
+            error: 'Gagal memperbarui data: ' + error.message
         });
     }
 });
@@ -646,6 +678,9 @@ app.post('/run-query', authMiddleware, async (req, res) => {
                 break;
             case 'gwscanner_overtime_not_sync':
                 result = await checkGWScannerOvertimeSyncData();
+                break;
+            case 'gwscanner_taskreg':
+                result = await checkGWScannerTaskregData();
                 break;
             default:
                 return res.status(400).json({
@@ -1012,9 +1047,38 @@ function updateSchedule(intervalMinutes = 60) {
 // Ganti kode app.listen yang ada dengan kode berikut:
 async function startServer() {
     try {
+        // Pastikan direktori penting ada
+        const dirsToCheck = [
+            path.join(__dirname, 'public/data'),
+            path.join(__dirname, 'history'),
+            path.join(__dirname, 'history_backup'),
+            path.join(__dirname, 'temp')
+        ];
+        
+        dirsToCheck.forEach(dir => {
+            if (!fs.existsSync(dir)) {
+                console.log(`Creating directory: ${dir}`);
+                fs.mkdirSync(dir, { recursive: true });
+            }
+        });
+        
         // Inisialisasi data terlebih dahulu
         console.log('Preparing data before starting server...');
         await initializeData();
+        
+        // Pastikan history tracker diinisialisasi
+        console.log('Initializing history tracker...');
+        const historyPath = path.join(__dirname, 'history', 'unified_history.json');
+        if (!fs.existsSync(path.dirname(historyPath))) {
+            fs.writeFileSync(historyPath, JSON.stringify({
+                tunjangan_beras: {},
+                bpjs: {},
+                gwscanner: {},
+                ffbworker: {},
+                gwscanner_overtime_not_sync: {},
+                gwscanner_taskreg: {}
+            }, null, 2));
+        }
         
         // Set interval untuk refresh data otomatis setiap 1 jam
         updateSchedule(60); // 60 menit = 1 jam

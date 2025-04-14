@@ -1142,6 +1142,9 @@ function updateContainerWithErrorMessage(filename, error) {
           <button class="btn btn-sm btn-danger refresh-error-btn" data-filename="${filename}" data-tabid="${tabId}">
             <i class="fas fa-sync-alt me-1"></i> Coba Lagi
           </button>
+          <button class="btn btn-sm btn-outline-primary force-refresh-btn" data-filename="${filename}" data-tabid="${tabId}">
+            <i class="fas fa-server me-1"></i> Refresh Dari Database
+          </button>
         </div>
       </div>
     `;
@@ -1162,14 +1165,14 @@ function updateContainerWithErrorMessage(filename, error) {
                 <span class="visually-hidden">Loading...</span>
               </div>
               <div>
-                <strong>Memuat ulang data...</strong>
+                <strong>Memuat ulang data dari cache...</strong>
               </div>
             </div>
           </div>
         `;
         
-        // Try to reload
-        loadDataFromTemp(filename, true)
+        // Try to reload from cache
+        loadDataFromTemp(filename, false)
           .then(data => {
             // Tampilkan data dengan parameter yang baru
             displayDataInTable(data, tabId);
@@ -1191,9 +1194,110 @@ function updateContainerWithErrorMessage(filename, error) {
           });
       });
     }
+    
+    // Add event listener to the force refresh button (refresh from database)
+    const forceRefreshBtn = container.querySelector('.force-refresh-btn');
+    if (forceRefreshBtn) {
+      forceRefreshBtn.addEventListener('click', function() {
+        // Get data attributes
+        const filename = this.getAttribute('data-filename');
+        const tabId = this.getAttribute('data-tabid');
+        
+        // Show loading indicator
+        container.innerHTML = `
+          <div class="alert alert-info loading-indicator">
+            <div class="d-flex align-items-center">
+              <div class="spinner-border spinner-border-sm me-2" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+              <div>
+                <strong>Mengambil data baru dari database...</strong>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Extract data type from filename
+        const dataType = filename.replace('_temp.json', '').replace('_results.json', '');
+        
+        // Call API to refresh data from database
+        fetch(`/api/refresh-data?type=${dataType}`)
+          .then(response => {
+            if (!response.ok) {
+              return response.json().then(data => {
+                throw new Error(data.error || `Server returned ${response.status}`);
+              });
+            }
+            return response.json();
+          })
+          .then(data => {
+            if (data.success) {
+              // Data refreshed, now load the fresh data from cache
+              showNotification('success', `Data ${dataType} berhasil direfresh dari database`);
+              return loadDataFromTemp(filename, true);
+            } else {
+              throw new Error(data.error || 'Gagal memperbarui data');
+            }
+          })
+          .then(freshData => {
+            // Display the fresh data
+            displayDataInTable(freshData, tabId);
+          })
+          .catch(err => {
+            console.error("Error refreshing data from database:", err);
+            // Show error message
+            container.innerHTML = `
+              <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Error memperbarui data dari database:</strong> ${err.message}
+                <div class="mt-2">
+                  <button class="btn btn-sm btn-outline-danger" onclick="window.location.reload()">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh Halaman
+                  </button>
+                </div>
+              </div>
+            `;
+          });
+      });
+    }
   } catch (e) {
     console.error("Error updating container with error message:", e);
   }
+}
+
+// Helper function to show notification
+function showNotification(type, message) {
+  // Check if notification-container exists, if not create it
+  let container = document.getElementById('notification-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'notification-container';
+    container.className = 'notification-container';
+    document.body.appendChild(container);
+  }
+  
+  // Create notification element
+  const notification = document.createElement('div');
+  notification.className = `notification notification-${type}`;
+  notification.innerHTML = `
+    <div class="notification-content">
+      <i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>
+      <span>${message}</span>
+    </div>
+  `;
+  
+  // Add to container
+  container.appendChild(notification);
+  
+  // Auto remove after delay
+  setTimeout(() => {
+    notification.classList.add('notification-hide');
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 300);
+  }, 3000);
 }
 
 // Fungsi filter telah dihapus

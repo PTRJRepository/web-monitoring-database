@@ -41,6 +41,12 @@ function saveQueryResultsToJson(dataType, data) {
 // Fungsi untuk menyimpan data ke history
 function saveQueryHistory(dataType, data) {
     try {
+        // Pastikan direktori history ada
+        if (!fs.existsSync(historyDir)) {
+            console.log(`Creating history directory: ${historyDir}`);
+            fs.mkdirSync(historyDir, { recursive: true });
+        }
+        
         const timestamp = moment().format('YYYY-MM-DD_HH-mm-ss');
         const filePath = path.join(historyDir, `${dataType}_${timestamp}.json`);
         const historyData = {
@@ -54,7 +60,34 @@ function saveQueryHistory(dataType, data) {
         return filePath;
     } catch (err) {
         console.error(`Error saving ${dataType} history:`, err);
-        return null;
+        // Tampilkan detil error
+        console.error('Error details:', err.message);
+        if (err.stack) console.error(err.stack);
+        
+        // Coba lagi dengan menghindari operasi file yang bermasalah
+        try {
+            console.log('Attempting to create alternative history directory...');
+            const altHistoryDir = path.join(__dirname, '../history_backup');
+            if (!fs.existsSync(altHistoryDir)) {
+                fs.mkdirSync(altHistoryDir, { recursive: true });
+            }
+            
+            const timestamp = moment().format('YYYY-MM-DD_HH-mm-ss');
+            const filePath = path.join(altHistoryDir, `${dataType}_${timestamp}.json`);
+            const historyData = {
+                timestamp: new Date().toISOString(),
+                dataType: dataType,
+                recordCount: data.length,
+                // Simpan hanya sebagian data jika data terlalu besar
+                data: data.slice(0, 100) 
+            };
+            fs.writeFileSync(filePath, JSON.stringify(historyData, null, 2));
+            console.log(`Saved query history to alternative location: ${filePath}`);
+            return filePath;
+        } catch (backupErr) {
+            console.error('Failed to save history to alternative location:', backupErr);
+            return null;
+        }
     }
 }
 
@@ -66,45 +99,90 @@ function loadAllHistoryData() {
             bpjs: [],
             gwscanner: [],
             ffbworker: [],
-            gwscanner_overtime_not_sync: []
+            gwscanner_overtime_not_sync: [],
+            gwscanner_taskreg: []
         };
         
-        if (fs.existsSync(historyDir)) {
-            const files = fs.readdirSync(historyDir);
-            
-            files.forEach(file => {
-                if (file.endsWith('.json')) {
-                    try {
-                        const filePath = path.join(historyDir, file);
-                        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-                        
-                        // Ekstrak jenis data dari nama file
-                        const dataType = file.split('_')[0];
-                        
-                        if (historyData[dataType]) {
-                            historyData[dataType].push({
-                                timestamp: data.timestamp,
-                                recordCount: data.recordCount,
-                                filePath: filePath,
-                                fileName: file
-                            });
-                        }
-                    } catch (fileErr) {
-                        console.error(`Error processing history file ${file}:`, fileErr);
-                    }
-                }
-            });
-            
-            // Urutkan data berdasarkan timestamp (terbaru dulu)
-            Object.keys(historyData).forEach(key => {
-                historyData[key].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-            });
+        // Cek apakah direktori history ada
+        if (!fs.existsSync(historyDir)) {
+            console.log(`History directory not found, creating: ${historyDir}`);
+            fs.mkdirSync(historyDir, { recursive: true });
+            return historyData; // Kembalikan data kosong karena direktori baru dibuat
         }
         
+        const files = fs.readdirSync(historyDir);
+        
+        // Jika tidak ada file di direktori
+        if (files.length === 0) {
+            console.log('No history files found');
+            return historyData;
+        }
+        
+        // Proses setiap file dalam direktori
+        files.forEach(file => {
+            if (file.endsWith('.json')) {
+                try {
+                    const filePath = path.join(historyDir, file);
+                    // Verifikasi bahwa file benar-benar ada
+                    if (!fs.existsSync(filePath)) {
+                        console.warn(`File listed in directory but doesn't exist: ${filePath}`);
+                        return;
+                    }
+                    
+                    // Verifikasi bahwa file tidak kosong
+                    const stats = fs.statSync(filePath);
+                    if (stats.size === 0) {
+                        console.warn(`Empty file found: ${filePath}`);
+                        return;
+                    }
+                    
+                    // Baca dan parse file
+                    const fileContent = fs.readFileSync(filePath, 'utf8');
+                    if (!fileContent || fileContent.trim() === '') {
+                        console.warn(`File content is empty: ${filePath}`);
+                        return;
+                    }
+                    
+                    const data = JSON.parse(fileContent);
+                    
+                    // Ekstrak jenis data dari nama file
+                    const dataType = file.split('_')[0];
+                    
+                    if (historyData[dataType]) {
+                        historyData[dataType].push({
+                            timestamp: data.timestamp,
+                            recordCount: data.recordCount || 0,
+                            filePath: filePath,
+                            fileName: file
+                        });
+                    }
+                } catch (fileErr) {
+                    console.error(`Error processing history file ${file}:`, fileErr);
+                }
+            }
+        });
+        
+        // Urutkan data berdasarkan timestamp (terbaru dulu)
+        Object.keys(historyData).forEach(key => {
+            historyData[key].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        });
+        
+        console.log(`Successfully loaded history data: ${Object.keys(historyData).map(k => `${k}:${historyData[k].length}`).join(', ')}`);
         return historyData;
     } catch (err) {
         console.error('Error loading history data:', err);
-        return {};
+        console.error('Error details:', err.message);
+        if (err.stack) console.error(err.stack);
+        
+        // Kembalikan objek kosong tapi dengan struktur yang benar
+        return {
+            tunjangan_beras: [],
+            bpjs: [],
+            gwscanner: [],
+            ffbworker: [],
+            gwscanner_overtime_not_sync: [],
+            gwscanner_taskreg: []
+        };
     }
 }
 
