@@ -111,8 +111,15 @@ function loadDataFromTemp(filename, forceRefresh = false) {
     })
     .then(response => {
       if (!response.ok) {
-        throw new Error(`Network response was not ok: ${response.status}`);
+        throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`);
       }
+      
+      // Periksa Content-Type untuk memastikan ini JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`Expected JSON response, got ${contentType || 'unknown'}`);
+      }
+      
       return response.json();
     })
     .then(jsonData => {
@@ -122,11 +129,14 @@ function loadDataFromTemp(filename, forceRefresh = false) {
       // Jika data dalam format { timestamp, data: [...] }
       if (jsonData && typeof jsonData === 'object' && jsonData.data && Array.isArray(jsonData.data)) {
         data = jsonData.data;
+      } else if (jsonData && typeof jsonData === 'object' && jsonData.error) {
+        // Ada error dari server
+        throw new Error(`Server error: ${jsonData.error}`);
       }
       
       // Validasi data adalah array
       if (!Array.isArray(data)) {
-        console.error(`Data dalam ${filename} bukan array:`);
+        console.error(`Data dalam ${filename} bukan array:`, data);
         data = [];
       }
       
@@ -151,6 +161,11 @@ function loadDataFromTemp(filename, forceRefresh = false) {
         }, 2000);
       }
       
+      // Update status koneksi DB
+      if (typeof updateDbStatusIndicator === 'function') {
+        updateDbStatusIndicator('connected');
+      }
+      
       resolve(data);
     })
     .catch(error => {
@@ -158,13 +173,41 @@ function loadDataFromTemp(filename, forceRefresh = false) {
       
       // Update loading status dengan error
       if (loadingStatus) {
-        loadingStatus.innerHTML = `<i class="fas fa-exclamation-triangle text-danger"></i> Gagal memuat ${filename}`;
+        loadingStatus.innerHTML = `<i class="fas fa-exclamation-triangle text-danger"></i> Gagal memuat ${filename}: ${error.message}`;
         setTimeout(() => {
           loadingStatus.style.display = 'none';
         }, 3000);
       }
       
-      reject(error);
+      // Update status koneksi DB jika error
+      if (typeof updateDbStatusIndicator === 'function') {
+        const errorMessage = error.message || 'Unknown error';
+        if (errorMessage.includes('Failed to fetch') || 
+            errorMessage.includes('NetworkError')) {
+          updateDbStatusIndicator('disconnected');
+        } else {
+          updateDbStatusIndicator('error');
+        }
+      }
+      
+      // Cek apakah ada data cache yang bisa digunakan
+      if (window.dataCache && window.dataCache.loadedTables[filename]) {
+        console.log(`Menggunakan data cache untuk ${filename} karena error:`, error.message);
+        resolve(window.dataCache.loadedTables[filename].data);
+      } else {
+        // Jika tidak ada cache, kembalikan array kosong
+        console.log(`Tidak ada cache untuk ${filename}, mengembalikan array kosong`);
+        
+        // Simpan array kosong ke cache untuk mencegah error berkelanjutan
+        if (window.dataCache) {
+          window.dataCache.loadedTables[filename] = {
+            data: [],
+            timestamp: Date.now()
+          };
+        }
+        
+        resolve([]);
+      }
     })
     .finally(() => {
       // Hapus referensi promise
@@ -242,11 +285,14 @@ function loadAndDisplayAllTempData() {
 // Fungsi untuk memuat dan menampilkan data tab yang aktif saja
 function loadAndDisplayActiveTabData(tabId) {
   // Jika tabId tidak valid, batalkan
-  if (!tabId) return Promise.reject(new Error('TabID tidak valid'));
+  if (!tabId) {
+    console.warn('TabID tidak valid saat mencoba memuat data');
+    return Promise.reject(new Error('TabID tidak valid'));
+  }
   
   // Dapatkan filename berdasarkan tabId
   const filename = getFilenameFromTabId(tabId);
-  if (!filename) return Promise.reject(new Error('Filename tidak ditemukan untuk tab ini'));
+  // Karena getFilenameFromTabId sudah mengembalikan fallback, tidak perlu cek null
   
   // Jika data sudah dimuat dan valid, gunakan saja
   if (dataCache.loadedTables[tabId] && 
@@ -258,7 +304,7 @@ function loadAndDisplayActiveTabData(tabId) {
   }
   
   // Muat data untuk tab aktif
-  console.log(`Memuat data untuk tab aktif: ${tabId}`);
+  console.log(`Memuat data untuk tab aktif: ${tabId} dengan file ${filename}`);
   
   // Tampilkan loading di container tab
   const tabPane = document.getElementById(getContainerIdFromTabId(tabId));
@@ -290,16 +336,15 @@ function loadAndDisplayActiveTabData(tabId) {
       // Tandai bahwa tabel untuk tab ini sudah dimuat
       dataCache.loadedTables[tabId] = true;
       
-      // Map file ke container yang sesuai
-      const mapping = window.dataMapping ? window.dataMapping[filename] : null;
-      
-      if (mapping) {
-        const tabElement = document.getElementById(tabId);
-        
-        if (tabElement && typeof displayDataInTable === 'function') {
+      // Tampilkan data di UI
+      try {
+        const container = document.getElementById(getContainerIdFromTabId(tabId));
+        if (container && typeof displayDataInTable === 'function') {
           // Tampilkan data di tabel
-          displayDataInTable(data, mapping, tabElement);
+          displayDataInTable(data, tabId);
         }
+      } catch (displayError) {
+        console.error(`Error saat menampilkan data di tab ${tabId}:`, displayError);
       }
       
       return data;
@@ -311,30 +356,64 @@ function loadAndDisplayActiveTabData(tabId) {
       console.error(`Error loading data for tab ${tabId}:`, error);
       const container = document.getElementById(getContainerIdFromTabId(tabId));
       if (container) {
-        container.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i><strong>Error:</strong> ${error.message}</div>`;
+        container.innerHTML = `
+          <div class="alert alert-danger">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Error:</strong> ${error.message || 'Terjadi kesalahan saat memuat data.'}
+            <div class="mt-2">
+              <button class="btn btn-sm btn-outline-danger" onclick="window.location.reload()">
+                <i class="fas fa-sync-alt me-1"></i> Refresh Halaman
+              </button>
+            </div>
+          </div>
+        `;
       }
+      
+      // Dapatkan data dari cache jika ada
+      if (window.dataCache && window.dataCache.loadedTables[tabId]) {
+        console.log(`Menggunakan data cache untuk tab ${tabId} setelah error`);
+        // Kembalikan data cache meskipun ada error
+        return window.dataCache.loadedTables[tabId].data || [];
+      }
+      
       return Promise.reject(error);
     });
 }
 
 // Fungsi untuk mendapatkan filename berdasarkan tabId
 function getFilenameFromTabId(tabId) {
-  switch (tabId) {
-    case 'tunjangan-tab':
-      return 'tunjangan_beras_temp.json';
-    case 'bpjs-tab':
-      return 'bpjs_temp.json';
-    case 'gwscanner-tab':
-      return 'gwscanner_temp.json';
-    case 'ffbworker-tab':
-      return 'ffbworker_temp.json';
-    case 'gwscanner-overtime-tab':
-      return 'gwscanner_overtime_not_sync_temp.json';
-    case 'gwscanner-taskreg-tab':
-      return 'gwscanner_taskreg_temp.json';
-    default:
-      return null;
+  if (!tabId) {
+    console.warn('TabID tidak valid, menggunakan default tab');
+    return 'tunjangan_beras_temp.json'; // Default fallback
   }
+  
+  // Map TabID ke filename
+  const tabToFilenameMap = {
+    'tunjangan-tab': 'tunjangan_beras_temp.json',
+    'bpjs-tab': 'bpjs_temp.json',
+    'gwscanner-tab': 'gwscanner_temp.json',
+    'ffbworker-tab': 'ffbworker_temp.json',
+    'gwscanner-overtime-tab': 'gwscanner_overtime_not_sync_temp.json',
+    'gwscanner-taskreg-tab': 'gwscanner_taskreg_temp.json'
+  };
+  
+  // Cek apakah tabId ada dalam mapping
+  if (tabToFilenameMap[tabId]) {
+    return tabToFilenameMap[tabId];
+  }
+  
+  // Jika tabId tidak dikenali, coba dapatkan default tab
+  console.warn(`TabID '${tabId}' tidak dikenali, menggunakan default tab`);
+  
+  // Cek apakah ada tab aktif yang bisa digunakan
+  const activeTab = document.querySelector('.nav-link.active[id$="-tab"]');
+  if (activeTab && tabToFilenameMap[activeTab.id]) {
+    console.log(`Menggunakan tab aktif ${activeTab.id} sebagai alternatif`);
+    return tabToFilenameMap[activeTab.id];
+  }
+  
+  // Default fallback
+  return 'tunjangan_beras_temp.json';
 }
 
 // Fungsi untuk mendapatkan container ID berdasarkan tabId
@@ -440,12 +519,13 @@ function setupTabClickListeners() {
 }
 
 // Fungsi untuk menampilkan data dalam tabel dengan pagination dan optimasi
-function displayDataInTable(data, mapping, tabElement) {
-  const containerId = mapping.containerId || getContainerIdFromTabId(tabElement.id);
+function displayDataInTable(data, tabId) {
+  // Dapatkan container ID berdasarkan tabId
+  const containerId = getContainerIdFromTabId(tabId);
   const container = document.getElementById(containerId);
   
   if (!container) {
-    console.error(`Container ${containerId} tidak ditemukan`);
+    console.error(`Container untuk tab ${tabId} tidak ditemukan`);
     return;
   }
   
@@ -455,8 +535,14 @@ function displayDataInTable(data, mapping, tabElement) {
     return;
   }
   
-  // Tentukan tableId berdasarkan tabId
-  const tableId = mapping.tableId;
+  // Dapatkan filename dari tabId
+  const filename = getFilenameFromTabId(tabId);
+  
+  // Dapatkan mapping berdasarkan filename
+  const mapping = dataMapping[filename];
+  
+  // Tentukan tableId
+  const tableId = mapping ? mapping.tableId : tabId.replace('-tab', '-table');
   
   // Buat header tabel
   let headerHtml = '';
@@ -505,8 +591,25 @@ function displayDataInTable(data, mapping, tabElement) {
     
     console.log(`DataTable untuk ${tableId} berhasil diinisialisasi`);
     
-    // Filter functionality has been removed
-    console.log(`DataTable for ${tableId} initialized without filters`);
+    // Tambahkan info dan grafik jika mapping tersedia
+    if (mapping) {
+      try {
+        // Hapus table-responsive div, simpan untuk diposisikan setelah info cards
+        const tableResponsive = container.querySelector('.table-responsive');
+        if (tableResponsive) {
+          const parent = tableResponsive.parentNode;
+          tableResponsive.remove();
+          
+          // Buat info cards dan tampilkan di atas tabel
+          createInfoCards(data, mapping, parent);
+          
+          // Tambahkan kembali tabel setelah info cards
+          parent.appendChild(tableResponsive);
+        }
+      } catch (infoError) {
+        console.error(`Error saat membuat info cards:`, infoError);
+      }
+    }
   } catch (error) {
     console.error(`Error saat inisialisasi DataTable:`, error);
     container.innerHTML = '<div class="alert alert-danger"><i class="fas fa-exclamation-triangle me-2"></i><strong>Error:</strong> ' + error.message + '</div>';
@@ -806,26 +909,52 @@ function createInfoCards(data, mapping, container) {
     const refreshButton = document.getElementById(`refreshButton-${mapping.tableId}`);
     if (refreshButton) {
       refreshButton.addEventListener('click', function() {
-        // Cari filename dari mapping
-        const filename = Object.entries(dataMapping).find(([_, m]) => m.tableId === mapping.tableId)?.[0];
-        if (filename) {
-          // Hapus data dari cache agar dimuat ulang
-          delete loadedData[filename];
-          showInfoToast(`Memuat ulang data ${mapping.title}...`);
+        // Dapatkan tabId yang sesuai dengan mapping ini
+        const tabId = getTabIdForMappingTable(mapping.tableId);
+        
+        if (tabId) {
+          // Cari filename dari mapping
+          const filename = getFilenameFromTabId(tabId);
           
-          // Muat ulang data
-          loadDataFromTemp(filename)
-            .then(freshData => {
-              // Update tampilan
-              displayDataInTable(freshData, mapping, document.querySelector(mapping.tabSelector.split(', ')[0]));
-            })
-            .catch(error => {
-              showErrorToast(`Error saat refresh data: ${error.message}`);
-            });
+          if (filename) {
+            // Hapus data dari cache agar dimuat ulang
+            delete loadedData[filename];
+            showInfoToast(`Memuat ulang data ${mapping.title}...`);
+            
+            // Muat ulang data
+            loadDataFromTemp(filename, true)
+              .then(freshData => {
+                // Update tampilan dengan fungsi baru
+                displayDataInTable(freshData, tabId);
+              })
+              .catch(error => {
+                showErrorToast(`Error saat refresh data: ${error.message}`);
+              });
+          }
         }
       });
     }
   }, 100);
+}
+
+// Fungsi helper untuk mendapatkan tabId dari tableId mapping
+function getTabIdForMappingTable(tableId) {
+  switch(tableId) {
+    case 'tunjangan-beras-table':
+      return 'tunjangan-tab';
+    case 'bpjs-table':
+      return 'bpjs-tab';
+    case 'gwscanner-table':
+      return 'gwscanner-tab';
+    case 'ffb-worker-table':
+      return 'ffbworker-tab';
+    case 'gwscanner-overtime-table':
+      return 'gwscanner-overtime-tab';
+    case 'gwscanner-taskreg-table':
+      return 'gwscanner-taskreg-tab';
+    default:
+      return null;
+  }
 }
 
 // Fungsi untuk membuat grafik
@@ -1010,7 +1139,7 @@ function updateContainerWithErrorMessage(filename, error) {
         <i class="fas fa-exclamation-triangle me-2"></i>
         <strong>Error memuat data:</strong> ${error.message}
         <div class="mt-2">
-          <button class="btn btn-sm btn-danger refresh-error-btn" data-filename="${filename}">
+          <button class="btn btn-sm btn-danger refresh-error-btn" data-filename="${filename}" data-tabid="${tabId}">
             <i class="fas fa-sync-alt me-1"></i> Coba Lagi
           </button>
         </div>
@@ -1021,8 +1150,9 @@ function updateContainerWithErrorMessage(filename, error) {
     const refreshBtn = container.querySelector('.refresh-error-btn');
     if (refreshBtn) {
       refreshBtn.addEventListener('click', function() {
-        // Get the filename from the button's data attribute
+        // Get the filename and tabId from the button's data attribute
         const filename = this.getAttribute('data-filename');
+        const tabId = this.getAttribute('data-tabid');
         
         // Show loading indicator again
         container.innerHTML = `
@@ -1041,18 +1171,23 @@ function updateContainerWithErrorMessage(filename, error) {
         // Try to reload
         loadDataFromTemp(filename, true)
           .then(data => {
-            const tabId = getTabIdForFilename(filename);
-            const tabElement = document.getElementById(tabId);
-            
-            if (tabElement && window.dataMapping) {
-              const mapping = window.dataMapping[filename];
-              if (mapping) {
-                displayDataInTable(data, mapping, tabElement);
-              }
-            }
+            // Tampilkan data dengan parameter yang baru
+            displayDataInTable(data, tabId);
           })
           .catch(err => {
             console.error("Error reloading data:", err);
+            // Tampilkan pesan error lagi
+            container.innerHTML = `
+              <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Error memuat data:</strong> ${err.message}
+                <div class="mt-2">
+                  <button class="btn btn-sm btn-outline-danger" onclick="window.location.reload()">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh Halaman
+                  </button>
+                </div>
+              </div>
+            `;
           });
       });
     }

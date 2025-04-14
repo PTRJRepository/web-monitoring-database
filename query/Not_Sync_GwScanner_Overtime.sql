@@ -87,50 +87,72 @@ DECLARE @StartDate DATE = DATEFROMPARTS(@ProcessYear, @CalendarMonth, 1);
 -- Tanggal akhir (bulan berikutnya - 1 hari)
 DECLARE @EndDate DATE = DATEADD(DAY, -1, DATEADD(MONTH, 1, @StartDate));
 
--- CTE untuk mengidentifikasi karyawan dengan status OK dan CANCELLATION pada hari yang sama
-WITH EmployeeWithBothStatuses AS (
-    SELECT 
-        WORKERCODE,
-        CAST(TRANSDATE AS DATE) AS TransactionDate
-    FROM 
-        [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata]
-    WHERE 
-        TRANSDATE BETWEEN @StartDate AND @EndDate
-        AND TRANSSTATUS IN ('OK', 'CANCELLATION') -- Filter awal untuk efisiensi
-    GROUP BY 
-        WORKERCODE, 
-        CAST(TRANSDATE AS DATE)
-    HAVING 
-        COUNT(CASE WHEN TRANSSTATUS = 'OK' THEN 1 END) > 0
-        AND COUNT(CASE WHEN TRANSSTATUS = 'CANCELLATION' THEN 1 END) > 0
-)
+-- Periksa apakah tabel Gwscannerdata dan Overtime ada
+IF OBJECT_ID('staging_PTRJ_iFES_Plantware.dbo.Gwscannerdata', 'U') IS NOT NULL 
+   AND OBJECT_ID('staging_PTRJ_iFES_Plantware.dbo.Overtime', 'U') IS NOT NULL
+BEGIN
+    -- CTE untuk mengidentifikasi karyawan dengan status OK dan CANCELLATION pada hari yang sama
+    WITH EmployeeWithBothStatuses AS (
+        SELECT 
+            WORKERCODE,
+            CAST(TRANSDATE AS DATE) AS TransactionDate
+        FROM 
+            [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata]
+        WHERE 
+            TRANSDATE BETWEEN @StartDate AND @EndDate
+            AND TRANSSTATUS IN ('OK', 'CANCELLATION') -- Filter awal untuk efisiensi
+        GROUP BY 
+            WORKERCODE, 
+            CAST(TRANSDATE AS DATE)
+        HAVING 
+            COUNT(CASE WHEN TRANSSTATUS = 'OK' THEN 1 END) > 0
+            AND COUNT(CASE WHEN TRANSSTATUS = 'CANCELLATION' THEN 1 END) > 0
+    )
 
--- Query utama: Data karyawan dengan transaksi di kedua tabel, kecuali yang memiliki OK dan CANCELLATION pada hari yang sama
-SELECT
-    g.TRANSSTATUS AS Status_GWScanner,
-    o.TRANSSTATUS AS Status_Overtime,
-    g.WORKERCODE AS EmpCode,
-    e.EmpName,
-    CONVERT(DATE, g.TRANSDATE) AS TanggalTransaksi,
-    g.RECORDTAG AS RecordTag_GWScanner,
-    o.RECORDTAG AS RecordTag_Overtime,
-    g.TRANSNO AS TransNo_GWScanner,
-    o.TRANSNO AS TransNo_Overtime,
-    g.FROMOCCODE AS FromCode_GWScanner
-FROM 
-    [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata] g
-    INNER JOIN [staging_PTRJ_iFES_Plantware].[dbo].[Overtime] o 
-        ON g.WORKERCODE = o.WORKERCODE 
-        AND CONVERT(DATE, g.TRANSDATE) = CONVERT(DATE, o.TRANSDATE)
-    LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e 
-        ON g.WORKERCODE = e.EmpCode
-    LEFT JOIN EmployeeWithBothStatuses ebs 
-        ON g.WORKERCODE = ebs.WORKERCODE 
-        AND CONVERT(DATE, g.TRANSDATE) = ebs.TransactionDate
-WHERE 
-    g.TRANSDATE BETWEEN @StartDate AND @EndDate
-    AND g.RECORDTAG NOT IN ('GJ', 'GV', 'GZ')
-    AND ebs.WORKERCODE IS NULL -- Mengecualikan karyawan yang memiliki OK dan CANCELLATION pada hari yang sama
-ORDER BY 
-    g.WORKERCODE,
-    g.TRANSDATE;
+    -- Query utama: Data karyawan dengan transaksi di kedua tabel, kecuali yang memiliki OK dan CANCELLATION pada hari yang sama
+    SELECT
+        g.TRANSSTATUS AS Status_GWScanner,
+        o.TRANSSTATUS AS Status_Overtime,
+        g.WORKERCODE AS EmpCode,
+        e.EmpName,
+        CONVERT(DATE, g.TRANSDATE) AS TanggalTransaksi,
+        g.RECORDTAG AS RecordTag_GWScanner,
+        o.RECORDTAG AS RecordTag_Overtime,
+        g.TRANSNO AS TransNo_GWScanner,
+        o.TRANSNO AS TransNo_Overtime,
+        g.FROMOCCODE AS FromCode_GWScanner
+    FROM 
+        [staging_PTRJ_iFES_Plantware].[dbo].[Gwscannerdata] g
+        INNER JOIN [staging_PTRJ_iFES_Plantware].[dbo].[Overtime] o 
+            ON g.WORKERCODE = o.WORKERCODE 
+            AND CONVERT(DATE, g.TRANSDATE) = CONVERT(DATE, o.TRANSDATE)
+        LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e 
+            ON g.WORKERCODE = e.EmpCode
+        LEFT JOIN EmployeeWithBothStatuses ebs 
+            ON g.WORKERCODE = ebs.WORKERCODE 
+            AND CONVERT(DATE, g.TRANSDATE) = ebs.TransactionDate
+    WHERE 
+        g.TRANSDATE BETWEEN @StartDate AND @EndDate
+        AND g.RECORDTAG NOT IN ('GJ', 'GV', 'GZ')
+        AND ebs.WORKERCODE IS NULL -- Mengecualikan karyawan yang memiliki OK dan CANCELLATION pada hari yang sama
+    ORDER BY 
+        g.WORKERCODE,
+        g.TRANSDATE;
+END
+ELSE
+BEGIN
+    -- Salah satu atau kedua tabel tidak ada, kembalikan dataset kosong dengan struktur yang sama
+    SELECT 
+        NULL AS Status_GWScanner,
+        NULL AS Status_Overtime,
+        NULL AS EmpCode,
+        NULL AS EmpName,
+        NULL AS TanggalTransaksi,
+        NULL AS RecordTag_GWScanner,
+        NULL AS RecordTag_Overtime,
+        NULL AS TransNo_GWScanner,
+        NULL AS TransNo_Overtime,
+        NULL AS FromCode_GWScanner
+    WHERE 
+        1 = 0; -- Tidak mengembalikan data apapun
+END

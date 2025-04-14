@@ -191,8 +191,8 @@ const dbConfigs = {
         server: '10.0.0.2',
         port: 1888,
         database: 'db_ptrj',
-    options: {
-        encrypt: false,
+        options: {
+            encrypt: false,
             trustServerCertificate: true,
             connectionTimeout: 60000,
             requestTimeout: 60000,
@@ -440,6 +440,26 @@ app.get('/config', authMiddleware, (req, res) => {
 async function getDirectData(refreshFunction) {
     try {
         console.log(`Fetching data directly from database...`);
+        // Reset pool koneksi untuk memaksa koneksi baru
+        if (pool) {
+            try {
+                await pool.close();
+                console.log('Closed existing pool connection for refresh');
+            } catch (err) {
+                console.error('Error closing pool:', err);
+            }
+            pool = null;
+        }
+        
+        // Reset koneksi pada dbModule
+        try {
+            const dbModule = require('./query/dbConnection');
+            await dbModule.closePool();
+            console.log('Reset database connection pool for refresh');
+        } catch (closeErr) {
+            console.error('Error resetting database module connection:', closeErr);
+        }
+        
         return await refreshFunction();
     } catch (err) {
         console.error('Error fetching data directly from database:', err);
@@ -494,6 +514,26 @@ app.get('/api/refresh-data', async (req, res) => {
         let recordCount = 0;
         
         console.log(`Refreshing data for type: ${dataType}`);
+        
+        // Reset koneksi database untuk refresh
+        if (pool) {
+            try {
+                await pool.close();
+                console.log('Closed existing pool connection for API refresh');
+            } catch (err) {
+                console.error('Error closing pool:', err);
+            }
+            pool = null;
+        }
+        
+        // Juga reset koneksi pada modul database
+        try {
+            const dbModule = require('./query/dbConnection');
+            await dbModule.closePool();
+            console.log('Reset database module connection for API refresh');
+        } catch (closeErr) {
+            console.error('Error resetting database module connection:', closeErr);
+        }
         
         if (dataType === 'tunjangan_beras') {
             const data = await getDirectData(checkTunjanganBerasData);
@@ -1700,6 +1740,149 @@ app.get('/api/database-status', async (req, res) => {
             status: 'Error saat memeriksa koneksi database: ' + error.message,
             timestamp: new Date().toISOString()
         });
+    }
+});
+
+// Endpoint untuk konfigurasi database
+app.get('/database-config', authMiddleware, (req, res) => {
+    // Load konfigurasi database dari file
+    const dbConfigPath = path.join(__dirname, 'query/dbConfig.json');
+    let dbConfig = {};
+    
+    try {
+        if (fs.existsSync(dbConfigPath)) {
+            dbConfig = JSON.parse(fs.readFileSync(dbConfigPath, 'utf8'));
+        } else {
+            // Default config
+            dbConfig = {
+                remote: {
+                    server: '10.0.0.2,1433',
+                    user: 'sa',
+                    password: 'P@ssw0rd',
+                    database: 'staging_PTRJ_iFES_Plantware'
+                },
+                backup: {
+                    server: '192.168.1.100,1433',
+                    user: 'sa',
+                    password: 'P@ssw0rd',
+                    database: 'staging_PTRJ_iFES_Plantware'
+                },
+                local: {
+                    server: 'localhost',
+                    user: 'sa',
+                    password: 'YourStrong@Passw0rd',
+                    database: 'staging_PTRJ_iFES_Plantware'
+                }
+            };
+            
+            // Simpan konfigurasi default
+            fs.writeFileSync(dbConfigPath, JSON.stringify(dbConfig, null, 2));
+        }
+        
+        // Render halaman konfigurasi
+        res.render('database-config', { 
+            dbConfig,
+            message: req.query.message || null,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Error loading database configuration:', error);
+        res.status(500).render('error', { 
+            error: 'Gagal memuat konfigurasi database',
+            details: error.message
+        });
+    }
+});
+
+// Endpoint untuk menyimpan konfigurasi database
+app.post('/database-config', authMiddleware, (req, res) => {
+    try {
+        const { remote, backup, local, testConnection } = req.body;
+        
+        // Validasi input
+        if (!remote || !remote.server || !remote.user || !remote.database) {
+            return res.redirect('/database-config?error=Konfigurasi remote database tidak lengkap');
+        }
+        
+        // Buat objek konfigurasi
+        const dbConfig = {
+            remote: {
+                server: remote.server,
+                user: remote.user,
+                password: remote.password,
+                database: remote.database
+            },
+            backup: {
+                server: backup.server,
+                user: backup.user,
+                password: backup.password,
+                database: backup.database
+            },
+            local: {
+                server: local.server,
+                user: local.user,
+                password: local.password,
+                database: local.database
+            }
+        };
+        
+        // Simpan konfigurasi ke file
+        const dbConfigPath = path.join(__dirname, 'query/dbConfig.json');
+        fs.writeFileSync(dbConfigPath, JSON.stringify(dbConfig, null, 2));
+        
+        // Test koneksi jika diminta
+        if (testConnection === 'true') {
+            return res.redirect('/test-database-connection');
+        }
+        
+        // Redirect dengan pesan sukses
+        return res.redirect('/database-config?success=Konfigurasi database berhasil disimpan');
+    } catch (error) {
+        console.error('Error saving database configuration:', error);
+        return res.redirect(`/database-config?error=${encodeURIComponent(error.message)}`);
+    }
+});
+
+// Endpoint untuk test koneksi database
+app.get('/test-database-connection', authMiddleware, async (req, res) => {
+    try {
+        // Reset pool koneksi untuk memaksa koneksi baru
+        const dbModule = require('./query/dbConnection');
+        await dbModule.closePool();
+        
+        // Coba koneksi ke database
+        const pool = await dbModule.getPool();
+        
+        // Cek apakah ini mock pool
+        const isMockPool = !pool.DRIVERS;
+        
+        if (isMockPool) {
+            return res.redirect('/database-config?error=Gagal terhubung ke semua database. Cek konfigurasi dan koneksi jaringan Anda.');
+        } else {
+            return res.redirect('/database-config?success=Berhasil terhubung ke database');
+        }
+    } catch (error) {
+        console.error('Error testing database connection:', error);
+        return res.redirect(`/database-config?error=${encodeURIComponent(error.message)}`);
+    }
+});
+
+// Endpoint untuk reload aplikasi setelah konfigurasi database
+app.get('/reload-application', authMiddleware, async (req, res) => {
+    try {
+        // Reset database pool
+        const dbModule = require('./query/dbConnection');
+        await dbModule.closePool();
+        
+        // Re-inisialisasi data
+        await initializeData();
+        
+        // Redirect ke halaman utama
+        return res.redirect('/?success=Aplikasi berhasil dimuat ulang dengan konfigurasi database baru');
+    } catch (error) {
+        console.error('Error reloading application:', error);
+        return res.redirect(`/?error=${encodeURIComponent(error.message)}`);
     }
 });
 

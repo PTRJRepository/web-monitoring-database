@@ -88,34 +88,56 @@ DECLARE @StartDate DATE = DATEFROMPARTS(@ProcessYear, @CalendarMonth, 1);
 -- Tanggal akhir (bulan berikutnya - 1 hari)
 DECLARE @EndDate DATE = DATEADD(DAY, -1, DATEADD(MONTH, 1, @StartDate));
 
-WITH DuplicateTransactions AS (
+-- Periksa apakah tabel GWScanner_Transaction ada
+IF OBJECT_ID('db_ptrj.dbo.GWScanner_Transaction', 'U') IS NOT NULL
+BEGIN
+    -- Tabel GWScanner_Transaction ada, lanjutkan dengan query normal
+    WITH DuplicateTransactions AS (
+        SELECT 
+            ID,
+            TRANSNO,
+            FROMOCCODE,
+            TOOCCODE,
+            SCANNERUSERCODE,
+            WORKERCODE,
+            FIELDNO,
+            TRANSDATE,
+            TRANSSTATUS,
+            COUNT(*) OVER (
+                PARTITION BY TRANSNO, FROMOCCODE, TOOCCODE, WORKERCODE, FIELDNO, TRANSDATE
+            ) as DuplicateCount
+        FROM 
+            [db_ptrj].[dbo].[GWScanner_Transaction]
+        WHERE 
+            TRANSDATE >= @StartDate  -- Menggunakan start date dari periode pembukuan
+            AND TRANSDATE <= @EndDate  -- Menggunakan end date dari periode pembukuan
+    )
     SELECT 
-        ID,
-        TRANSNO,
-        FROMOCCODE,
-        TOOCCODE,
-        SCANNERUSERCODE,
-        WORKERCODE,
-        FIELDNO,
-        TRANSDATE,
-        TRANSSTATUS,
-        COUNT(*) OVER (
-            PARTITION BY TRANSNO, FROMOCCODE, TOOCCODE, WORKERCODE, FIELDNO, TRANSDATE
-        ) as DuplicateCount
+        *
     FROM 
-        [db_ptrj].[dbo].[GWScanner_Transaction]
+        DuplicateTransactions
     WHERE 
-        TRANSDATE >= @StartDate  -- Menggunakan start date dari periode pembukuan
-        AND TRANSDATE <= @EndDate  -- Menggunakan end date dari periode pembukuan
-)
-SELECT 
-    *
-FROM 
-    DuplicateTransactions
-WHERE 
-    DuplicateCount > 1
-ORDER BY 
-    TRANSNO, TRANSDATE
+        DuplicateCount > 1
+    ORDER BY 
+        TRANSNO, TRANSDATE;
+END
+ELSE
+BEGIN
+    -- Tabel GWScanner_Transaction tidak ada, kembalikan data kosong dengan struktur yang sama
+    SELECT 
+        NULL AS ID,
+        NULL AS TRANSNO,
+        NULL AS FROMOCCODE,
+        NULL AS TOOCCODE,
+        NULL AS SCANNERUSERCODE,
+        NULL AS WORKERCODE,
+        NULL AS FIELDNO,
+        NULL AS TRANSDATE,
+        NULL AS TRANSSTATUS,
+        NULL AS DuplicateCount
+    WHERE 
+        1 = 0; -- Tidak mengembalikan data
+END
 `;
 
 const FFBWORKER_QUERY = `
@@ -208,41 +230,68 @@ DECLARE @StartDate DATE = DATEFROMPARTS(@ProcessYear, @CalendarMonth, 1);
 -- Tanggal akhir (bulan berikutnya - 1 hari)
 DECLARE @EndDate DATE = DATEADD(DAY, -1, DATEADD(MONTH, 1, @StartDate));
 
-WITH WorkerTransactions AS (
+-- Periksa apakah tabel GWScanner_Transaction ada
+IF OBJECT_ID('db_ptrj.dbo.GWScanner_Transaction', 'U') IS NOT NULL AND OBJECT_ID('db_ptrj.dbo.HR_EMPLOYEE', 'U') IS NOT NULL
+BEGIN
+    -- Kedua tabel ada, lanjutkan dengan query normal
+    WITH WorkerTransactions AS (
+        SELECT 
+            t.ID,
+            t.TRANSNO,
+            t.FROMOCCODE,
+            t.TOOCCODE,
+            t.WORKERCODE,
+            t.FIELDNO,
+            t.LOOSEFRUIT,
+            t.RIPE,
+            t.UNRIPE,
+            t.OVERRIPE,
+            t.TRANSDATE,
+            t.TRANSSTATUS,
+            e.EmpStatus,
+            e.PosCode,
+            COUNT(*) OVER (
+                PARTITION BY t.WORKERCODE
+            ) as JumlahKemunculan
+        FROM 
+            [db_ptrj].[dbo].[GWScanner_Transaction] t
+            LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e ON t.WORKERCODE = e.EmpCode
+        WHERE 
+            t.TRANSDATE >= @StartDate  -- Menggunakan start date dari periode pembukuan
+            AND t.TRANSDATE <= @EndDate  -- Menggunakan end date dari periode pembukuan
+            AND e.PosCode NOT IN ('HAR')  -- Exclude harvester positions
+    )
     SELECT 
-        t.ID,
-        t.TRANSNO,
-        t.FROMOCCODE,
-        t.TOOCCODE,
-        t.WORKERCODE,
-        t.FIELDNO,
-        t.LOOSEFRUIT,
-        t.RIPE,
-        t.UNRIPE,
-        t.OVERRIPE,
-        t.TRANSDATE,
-        t.TRANSSTATUS,
-        e.EmpStatus,
-        e.PosCode,
-        COUNT(*) OVER (
-            PARTITION BY t.WORKERCODE
-        ) as JumlahKemunculan
+        *
     FROM 
-        [db_ptrj].[dbo].[GWScanner_Transaction] t
-        LEFT JOIN [db_ptrj].[dbo].[HR_EMPLOYEE] e ON t.WORKERCODE = e.EmpCode
+        WorkerTransactions
     WHERE 
-        t.TRANSDATE >= @StartDate  -- Menggunakan start date dari periode pembukuan
-        AND t.TRANSDATE <= @EndDate  -- Menggunakan end date dari periode pembukuan
-        AND e.PosCode NOT IN ('HAR')  -- Exclude harvester positions
-)
-SELECT 
-    *
-FROM 
-    WorkerTransactions
-WHERE 
-    RIPE > 0  -- Only records with Ripe data
-ORDER BY 
-    WORKERCODE, TRANSDATE
+        RIPE > 0  -- Only records with Ripe data
+    ORDER BY 
+        WORKERCODE, TRANSDATE;
+END
+ELSE
+BEGIN
+    -- Salah satu atau kedua tabel tidak ada, kembalikan data kosong dengan struktur yang sama
+    SELECT 
+        NULL AS ID,
+        NULL AS TRANSNO,
+        NULL AS FROMOCCODE,
+        NULL AS TOOCCODE,
+        NULL AS WORKERCODE,
+        NULL AS FIELDNO,
+        NULL AS LOOSEFRUIT,
+        NULL AS RIPE,
+        NULL AS UNRIPE,
+        NULL AS OVERRIPE,
+        NULL AS TRANSDATE,
+        NULL AS TRANSSTATUS,
+        NULL AS EmpStatus,
+        NULL AS PosCode,
+        NULL AS JumlahKemunculan
+    WHERE 
+        1 = 0; -- Tidak mengembalikan data
+END
 `;
 
 module.exports = {
